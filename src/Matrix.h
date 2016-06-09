@@ -105,6 +105,7 @@ public:
   JSFUNC(Split)
   JSFUNC(Merge)
   JSFUNC(EqualizeHist)
+  JSFUNC(CalcHist)
   JSFUNC(Pixel)
   JSFUNC(FloodFill)
 

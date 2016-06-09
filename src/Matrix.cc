@@ -91,6 +91,7 @@ void Matrix::Init(Local<Object> target) {
   Nan::SetPrototypeMethod(ctor, "split", Split);
   Nan::SetPrototypeMethod(ctor, "merge", Merge);
   Nan::SetPrototypeMethod(ctor, "equalizeHist", EqualizeHist);
+  Nan::SetPrototypeMethod(ctor, "calcHist", CalcHist);
   Nan::SetPrototypeMethod(ctor, "floodFill", FloodFill);
   Nan::SetPrototypeMethod(ctor, "matchTemplate", MatchTemplate);
   Nan::SetPrototypeMethod(ctor, "templateMatches", TemplateMatches);
@@ -2108,6 +2109,64 @@ NAN_METHOD(Matrix::EqualizeHist) {
 
   cv::equalizeHist(self->mat, self->mat);
 
+  return;
+}
+
+// @author MartinGuillon
+// calc histogram
+// img.calcHist()
+NAN_METHOD(Matrix::CalcHist) {
+  SETUP_FUNCTION(Matrix)
+  if (info.Length() < 4) {
+    return;
+  }
+
+  Local<Array> array = Local<Array>::Cast(info[0]->ToObject());
+  int channels[array->Length()];
+  for (unsigned int i = 0; i < array->Length(); i++) {
+    channels[i] = array->Get(i)->IntegerValue();
+  }
+
+  cv::Mat mask;
+  if (info[1]->IsNull()) {
+    mask = cv::Mat();
+  } else {
+    Matrix *m_mask = Nan::ObjectWrap::Unwrap<Matrix>(info[1]->ToObject());
+    mask = m_mask->mat;
+  }
+
+  array = Local<Array>::Cast(info[2]->ToObject());
+  int histSize[array->Length()];
+  for (unsigned int i = 0; i < array->Length(); i++) {
+    histSize[i] = array->Get(i)->IntegerValue();
+  }
+
+  array = Local<Array>::Cast(info[3]->ToObject());
+  float range[array->Length()];
+  for (unsigned int i = 0; i < array->Length(); i++) {
+    range[i] = array->Get(i)->NumberValue();
+  }
+  const float *ranges[] = {range};
+
+  bool uniform = (info.Length() >= 5) ? info[4]->BooleanValue() : true;
+  bool accumulate = (info.Length() >= 6) ? info[5]->BooleanValue() : false;
+  bool normalize = (info.Length() >= 7) ? info[6]->BooleanValue() : true;
+
+  cv::Mat hist;
+  cv::calcHist(&self->mat, 1, channels, mask, hist, 1, histSize, ranges,
+               uniform, accumulate);
+
+  if (normalize) {
+    cv::normalize(hist, hist, 0, self->mat.rows, cv::NORM_MINMAX, -1,
+                  cv::Mat());
+  }
+
+  Local<Object> result =
+      Nan::New(Matrix::constructor)->GetFunction()->NewInstance();
+  Matrix *resultmat = Nan::ObjectWrap::Unwrap<Matrix>(result);
+  resultmat->mat = hist;
+
+  info.GetReturnValue().Set(result);
   return;
 }
 
