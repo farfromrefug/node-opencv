@@ -207,10 +207,9 @@ double Matrix::DblGet(cv::Mat mat, int i, int j) {
       val = mat.at<double>(i, j);
       break;
     default:
-      val = mat.at<double>(i, j);
+      val = mat.at<float>(i, j);
       break;
   }
-
   return val;
 }
 
