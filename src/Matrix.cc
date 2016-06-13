@@ -1990,58 +1990,73 @@ NAN_METHOD(Matrix::ConvertTo) {
 NAN_METHOD(Matrix::CvtColor) {
   Nan::HandleScope scope;
 
-  Matrix * self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
+  Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
   if (info.Length() < 1) {
     Nan::ThrowTypeError("Invalid number of arguments");
   }
 
-  // Get transform string
-  v8::String::Utf8Value str (info[0]->ToString());
-  std::string str2 = std::string(*str);
-  const char * sTransform = (const char *) str2.c_str();
-  int iTransform;
+  int iTransform = 0;
+  if (info[0]->IsString()) {
+    // Get transform string
+    v8::String::Utf8Value str(info[0]->ToString());
+    std::string str2 = std::string(*str);
+    const char *sTransform = (const char *)str2.c_str();
 
-  if (!strcmp(sTransform, "CV_BGR2GRAY")) {
-    iTransform = CV_BGR2GRAY;
-  } else if (!strcmp(sTransform, "CV_GRAY2BGR")) {
-    iTransform = CV_GRAY2BGR;
-  } else if (!strcmp(sTransform, "CV_BGR2XYZ")) {
-    iTransform = CV_BGR2XYZ;
-  } else if (!strcmp(sTransform, "CV_XYZ2BGR")) {
-    iTransform = CV_XYZ2BGR;
-  } else if (!strcmp(sTransform, "CV_BGR2YCrCb")) {
-    iTransform = CV_BGR2YCrCb;
-  } else if (!strcmp(sTransform, "CV_YCrCb2BGR")) {
-    iTransform = CV_YCrCb2BGR;
-  } else if (!strcmp(sTransform, "CV_BGR2HSV")) {
-    iTransform = CV_BGR2HSV;
-  } else if (!strcmp(sTransform, "CV_HSV2BGR")) {
-    iTransform = CV_HSV2BGR;
-  } else if (!strcmp(sTransform, "CV_BGR2HLS")) {
-    iTransform = CV_BGR2HLS;
-  } else if (!strcmp(sTransform, "CV_HLS2BGR")) {
-    iTransform = CV_HLS2BGR;
-  } else if (!strcmp(sTransform, "CV_BGR2Lab")) {
-    iTransform = CV_BGR2Lab;
-  } else if (!strcmp(sTransform, "CV_Lab2BGR")) {
-    iTransform = CV_Lab2BGR;
-  } else if (!strcmp(sTransform, "CV_BGR2Luv")) {
-    iTransform = CV_BGR2Luv;
-  } else if (!strcmp(sTransform, "CV_Luv2BGR")) {
-    iTransform = CV_Luv2BGR;
-  } else if (!strcmp(sTransform, "CV_BayerBG2BGR")) {
-    iTransform = CV_BayerBG2BGR;
-  } else if (!strcmp(sTransform, "CV_BayerGB2BGR")) {
-    iTransform = CV_BayerGB2BGR;
-  } else if (!strcmp(sTransform, "CV_BayerRG2BGR")) {
-    iTransform = CV_BayerRG2BGR;
-  } else if (!strcmp(sTransform, "CV_BayerGR2BGR")) {
-    iTransform = CV_BayerGR2BGR;
-  } else if (!strcmp(sTransform, "CV_BGR2RGB")) {
-    iTransform = CV_BGR2RGB;
-  } else {
-    iTransform = 0;  // to avoid compiler warning
-    Nan::ThrowTypeError("Conversion code is unsupported");
+    if (!strcmp(sTransform, "CV_BGR2GRAY")) {
+      iTransform = CV_BGR2GRAY;
+    } else if (!strcmp(sTransform, "CV_GRAY2BGR")) {
+      iTransform = CV_GRAY2BGR;
+    } else if (!strcmp(sTransform, "CV_BGR2XYZ")) {
+      iTransform = CV_BGR2XYZ;
+    } else if (!strcmp(sTransform, "CV_XYZ2BGR")) {
+      iTransform = CV_XYZ2BGR;
+    } else if (!strcmp(sTransform, "CV_BGR2YCrCb")) {
+      iTransform = CV_BGR2YCrCb;
+    } else if (!strcmp(sTransform, "CV_YCrCb2BGR")) {
+      iTransform = CV_YCrCb2BGR;
+    } else if (!strcmp(sTransform, "CV_BGR2HSV")) {
+      iTransform = CV_BGR2HSV;
+    } else if (!strcmp(sTransform, "CV_HSV2BGR")) {
+      iTransform = CV_HSV2BGR;
+    } else if (!strcmp(sTransform, "CV_BGR2HLS")) {
+      iTransform = CV_BGR2HLS;
+    } else if (!strcmp(sTransform, "CV_HLS2BGR")) {
+      iTransform = CV_HLS2BGR;
+    } else if (!strcmp(sTransform, "CV_BGR2Lab")) {
+      iTransform = CV_BGR2Lab;
+    } else if (!strcmp(sTransform, "CV_Lab2BGR")) {
+      iTransform = CV_Lab2BGR;
+    } else if (!strcmp(sTransform, "CV_BGR2Luv")) {
+      iTransform = CV_BGR2Luv;
+    } else if (!strcmp(sTransform, "CV_Luv2BGR")) {
+      iTransform = CV_Luv2BGR;
+    } else if (!strcmp(sTransform, "CV_BayerBG2BGR")) {
+      iTransform = CV_BayerBG2BGR;
+    } else if (!strcmp(sTransform, "CV_BayerGB2BGR")) {
+      iTransform = CV_BayerGB2BGR;
+    } else if (!strcmp(sTransform, "CV_BayerRG2BGR")) {
+      iTransform = CV_BayerRG2BGR;
+    } else if (!strcmp(sTransform, "CV_BayerGR2BGR")) {
+      iTransform = CV_BayerGR2BGR;
+    } else if (!strcmp(sTransform, "CV_BGR2RGB")) {
+      iTransform = CV_BGR2RGB;
+    } else if (!strcmp(sTransform, "CV_GRAY2BGRA")) {
+      iTransform = CV_GRAY2BGRA;
+    } else if (!strcmp(sTransform, "CV_GRAY2BGRA")) {
+      iTransform = CV_GRAY2BGRA;
+    } else if (!strcmp(sTransform, "CV_GRAY2BGRA")) {
+      iTransform = CV_GRAY2BGRA;
+    } else if (!strcmp(sTransform, "CV_GRAY2RGBA")) {
+      iTransform = CV_GRAY2RGBA;
+    } else {
+      iTransform = 0; // to avoid compiler warning
+      Nan::ThrowTypeError("Conversion code is unsupported");
+    }
+  } else if (info[0]->IsNumber()) {
+    iTransform = info[0]->NumberValue();
+    if (iTransform >= CV_COLORCVT_MAX) {
+      iTransform = 0;
+    }
   }
 
   cv::cvtColor(self->mat, self->mat, iTransform);
