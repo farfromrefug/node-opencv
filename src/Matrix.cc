@@ -2137,7 +2137,7 @@ NAN_METHOD(Matrix::CalcHist) {
   }
 
   Local<Array> array = Local<Array>::Cast(info[0]->ToObject());
-  int channels[array->Length()];
+  int *channels = new int[array->Length()];
   for (unsigned int i = 0; i < array->Length(); i++) {
     channels[i] = array->Get(i)->IntegerValue();
   }
@@ -2151,13 +2151,13 @@ NAN_METHOD(Matrix::CalcHist) {
   }
 
   array = Local<Array>::Cast(info[2]->ToObject());
-  int histSize[array->Length()];
+  int *histSize = new int[array->Length()];
   for (unsigned int i = 0; i < array->Length(); i++) {
     histSize[i] = array->Get(i)->IntegerValue();
   }
 
   array = Local<Array>::Cast(info[3]->ToObject());
-  float range[array->Length()];
+  float *range = new float[array->Length()];
   for (unsigned int i = 0; i < array->Length(); i++) {
     range[i] = array->Get(i)->NumberValue();
   }
