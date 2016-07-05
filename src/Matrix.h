@@ -12,6 +12,8 @@ public:
   Matrix(int rows, int cols);
   Matrix(int rows, int cols, int type);
   Matrix(int rows, int cols, int type, Local<Object> scalarObj);
+  Matrix(int rows, int cols, int type, char* data, int dataLength);
+~Matrix();
 
   static double DblGet(cv::Mat mat, int i, int j);
 

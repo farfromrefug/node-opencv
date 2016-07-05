@@ -136,6 +136,10 @@ NAN_METHOD(Matrix::New) {
         info[2]->IsInt32() && info[3]->IsArray()) {
     mat = new Matrix(info[0]->IntegerValue(), info[1]->IntegerValue(),
         info[2]->IntegerValue(), info[3]->ToObject());
+  } else if (info.Length() == 4 && info[0]->IsInt32() && info[1]->IsInt32() &&
+        info[2]->IsInt32() && Buffer::HasInstance(info[3])) {
+    mat = new Matrix(info[0]->IntegerValue(), info[1]->IntegerValue(),
+        info[2]->IntegerValue(), Buffer::Data(info[3]), Buffer::Length(info[3]));
   } else {  // if (info.Length() == 5) {
     Matrix *other = Nan::ObjectWrap::Unwrap<Matrix>(info[0]->ToObject());
     int x = info[1]->IntegerValue();
@@ -161,12 +165,17 @@ Matrix::Matrix(int rows, int cols) :
 
 Matrix::Matrix(int rows, int cols, int type) :
     node_opencv::Matrix() {
+    std::cout << "Matrix " << rows << std::endl;
   mat = cv::Mat(rows, cols, type);
 }
 
 Matrix::Matrix(cv::Mat m, cv::Rect roi) :
     node_opencv::Matrix() {
   mat = cv::Mat(m, roi);
+}
+
+Matrix::Matrix(int rows, int cols, int type, char* data, int dataLength) {
+  mat = cv::Mat(rows, cols, type, data);
 }
 
 Matrix::Matrix(int rows, int cols, int type, Local<Object> scalarObj) {
@@ -183,6 +192,15 @@ Matrix::Matrix(int rows, int cols, int type, Local<Object> scalarObj) {
   } else {
     Nan::ThrowError("Only 1-3 channels are supported");
   }
+}
+
+Matrix::~Matrix() {
+    std::cout << "~Matrix" << std::endl;
+  if (mat.refcount != NULL) {
+    std::cout << "releasing Matrix: " << *mat.refcount << std::endl;
+  }
+  // mat.release();
+    // std::cout << " Matrix released: " << *mat.refcount << std::endl;
 }
 
 NAN_METHOD(Matrix::Empty) {
