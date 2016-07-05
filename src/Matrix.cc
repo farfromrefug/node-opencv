@@ -165,7 +165,7 @@ Matrix::Matrix(int rows, int cols) :
 
 Matrix::Matrix(int rows, int cols, int type) :
     node_opencv::Matrix() {
-    std::cout << "Matrix " << rows << std::endl;
+    // std::cout << "Matrix " << rows << std::endl;
   mat = cv::Mat(rows, cols, type);
 }
 
@@ -195,10 +195,10 @@ Matrix::Matrix(int rows, int cols, int type, Local<Object> scalarObj) {
 }
 
 Matrix::~Matrix() {
-    std::cout << "~Matrix" << std::endl;
-  if (mat.refcount != NULL) {
-    std::cout << "releasing Matrix: " << *mat.refcount << std::endl;
-  }
+    // std::cout << "~Matrix" << std::endl;
+  // if (mat.refcount != NULL) {
+    // std::cout << "releasing Matrix: " << *mat.refcount << std::endl;
+  // }
   // mat.release();
     // std::cout << " Matrix released: " << *mat.refcount << std::endl;
 }
