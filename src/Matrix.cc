@@ -2020,51 +2020,51 @@ NAN_METHOD(Matrix::CvtColor) {
     std::string str2 = std::string(*str);
     const char *sTransform = (const char *)str2.c_str();
 
-    if (strcmp(sTransform, "BGR2GRAY")) {
+    if (!strcmp(sTransform, "BGR2GRAY")) {
       iTransform = CV_BGR2GRAY;
-    } else if (strcmp(sTransform, "GRAY2BGR")) {
+    } else if (!strcmp(sTransform, "GRAY2BGR")) {
       iTransform = CV_GRAY2BGR;
-    } else if (strcmp(sTransform, "BGR2XYZ")) {
+    } else if (!strcmp(sTransform, "BGR2XYZ")) {
       iTransform = CV_BGR2XYZ;
-    } else if (strcmp(sTransform, "XYZ2BGR")) {
+    } else if (!strcmp(sTransform, "XYZ2BGR")) {
       iTransform = CV_XYZ2BGR;
-    } else if (strcmp(sTransform, "BGR2YCrCb")) {
+    } else if (!strcmp(sTransform, "BGR2YCrCb")) {
       iTransform = CV_BGR2YCrCb;
-    } else if (strcmp(sTransform, "YCrCb2BGR")) {
+    } else if (!strcmp(sTransform, "YCrCb2BGR")) {
       iTransform = CV_YCrCb2BGR;
-    } else if (strcmp(sTransform, "BGR2HSV")) {
+    } else if (!strcmp(sTransform, "BGR2HSV")) {
       iTransform = CV_BGR2HSV;
-    } else if (strcmp(sTransform, "HSV2BGR")) {
+    } else if (!strcmp(sTransform, "HSV2BGR")) {
       iTransform = CV_HSV2BGR;
-    } else if (strcmp(sTransform, "BGR2HLS")) {
+    } else if (!strcmp(sTransform, "BGR2HLS")) {
       iTransform = CV_BGR2HLS;
-    } else if (strcmp(sTransform, "HLS2BGR")) {
+    } else if (!strcmp(sTransform, "HLS2BGR")) {
       iTransform = CV_HLS2BGR;
-    } else if (strcmp(sTransform, "BGR2Lab")) {
+    } else if (!strcmp(sTransform, "BGR2Lab")) {
       iTransform = CV_BGR2Lab;
-    } else if (strcmp(sTransform, "Lab2BGR")) {
+    } else if (!strcmp(sTransform, "Lab2BGR")) {
       iTransform = CV_Lab2BGR;
-    } else if (strcmp(sTransform, "BGR2Luv")) {
+    } else if (!strcmp(sTransform, "BGR2Luv")) {
       iTransform = CV_BGR2Luv;
-    } else if (strcmp(sTransform, "Luv2BGR")) {
+    } else if (!strcmp(sTransform, "Luv2BGR")) {
       iTransform = CV_Luv2BGR;
-    } else if (strcmp(sTransform, "BayerBG2BGR")) {
+    } else if (!strcmp(sTransform, "BayerBG2BGR")) {
       iTransform = CV_BayerBG2BGR;
-    } else if (strcmp(sTransform, "BayerGB2BGR")) {
+    } else if (!strcmp(sTransform, "BayerGB2BGR")) {
       iTransform = CV_BayerGB2BGR;
-    } else if (strcmp(sTransform, "BayerRG2BGR")) {
+    } else if (!strcmp(sTransform, "BayerRG2BGR")) {
       iTransform = CV_BayerRG2BGR;
-    } else if (strcmp(sTransform, "BayerGR2BGR")) {
+    } else if (!strcmp(sTransform, "BayerGR2BGR")) {
       iTransform = CV_BayerGR2BGR;
-    } else if (strcmp(sTransform, "BGR2RGB")) {
+    } else if (!strcmp(sTransform, "BGR2RGB")) {
       iTransform = CV_BGR2RGB;
-    } else if (strcmp(sTransform, "GRAY2BGRA")) {
+    } else if (!strcmp(sTransform, "GRAY2BGRA")) {
       iTransform = CV_GRAY2BGRA;
-    } else if (strcmp(sTransform, "GRAY2BGRA")) {
+    } else if (!strcmp(sTransform, "GRAY2BGRA")) {
       iTransform = CV_GRAY2BGRA;
-    } else if (strcmp(sTransform, "GRAY2BGRA")) {
+    } else if (!strcmp(sTransform, "GRAY2BGRA")) {
       iTransform = CV_GRAY2BGRA;
-    } else if (strcmp(sTransform, "GRAY2RGBA")) {
+    } else if (!strcmp(sTransform, "GRAY2RGBA")) {
       iTransform = CV_GRAY2RGBA;
     } else {
       iTransform = 0; // to avoid compiler warning
