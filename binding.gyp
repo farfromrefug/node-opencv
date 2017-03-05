@@ -7,20 +7,10 @@
         "src/init.cc",
         "src/Matrix.cc",
         "src/OpenCV.cc",
-        "src/CascadeClassifierWrap.cc",
         "src/Contours.cc",
         "src/Point.cc",
-        "src/VideoCaptureWrap.cc",
-        "src/CamShift.cc",
         "src/HighGUI.cc",
-        "src/FaceRecognizer.cc",
-        "src/Features2d.cc",
-        "src/BackgroundSubtractor.cc",
-        "src/Constants.cc",
-        "src/Calib3D.cc",
-        "src/ImgProc.cc",
-        "src/Stereo.cc",
-        "src/LDAWrap.cc"
+        "src/Constants.cc"
       ],
 
       "libraries": [

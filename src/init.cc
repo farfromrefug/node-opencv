@@ -2,19 +2,19 @@
 
 #include "Point.h"
 #include "Matrix.h"
-#include "CascadeClassifierWrap.h"
-#include "VideoCaptureWrap.h"
+// #include "CascadeClassifierWrap.h"
+// #include "VideoCaptureWrap.h"
 #include "Contours.h"
-#include "CamShift.h"
+// #include "CamShift.h"
 #include "HighGUI.h"
-#include "FaceRecognizer.h"
-#include "Features2d.h"
+// #include "FaceRecognizer.h"
+// #include "Features2d.h"
 #include "Constants.h"
-#include "Calib3D.h"
-#include "ImgProc.h"
-#include "Stereo.h"
-#include "BackgroundSubtractor.h"
-#include "LDAWrap.h"
+// #include "Calib3D.h"
+// #include "ImgProc.h"
+// #include "Stereo.h"
+// #include "BackgroundSubtractor.h"
+// #include "LDAWrap.h"
 
 extern "C" void init(Local<Object> target) {
   Nan::HandleScope scope;
@@ -22,29 +22,29 @@ extern "C" void init(Local<Object> target) {
 
   Point::Init(target);
   Matrix::Init(target);
-  CascadeClassifierWrap::Init(target);
-  VideoCaptureWrap::Init(target);
+  // CascadeClassifierWrap::Init(target);
+  // VideoCaptureWrap::Init(target);
   Contour::Init(target);
-  TrackedObject::Init(target);
-  NamedWindow::Init(target);
+  // TrackedObject::Init(target);
+  // NamedWindow::Init(target);
   Constants::Init(target);
-  Calib3D::Init(target);
-  ImgProc::Init(target);
-#if CV_MAJOR_VERSION < 3
-  StereoBM::Init(target);
-  StereoSGBM::Init(target);
-  StereoGC::Init(target);
-#if CV_MAJOR_VERSION == 2 && CV_MINOR_VERSION >=4
-  BackgroundSubtractorWrap::Init(target);
-  Features::Init(target);
-#endif
-#if ((CV_MAJOR_VERSION == 2) && (CV_MINOR_VERSION >=4) && (CV_SUBMINOR_VERSION>=4))
-  LDAWrap::Init(target);
-#endif
-#endif
-#ifdef HAVE_OPENCV_FACE
-  FaceRecognizerWrap::Init(target);
-#endif
+  // Calib3D::Init(target);
+  // ImgProc::Init(target);
+// #if CV_MAJOR_VERSION < 3
+//   StereoBM::Init(target);
+//   StereoSGBM::Init(target);
+//   StereoGC::Init(target);
+// #if CV_MAJOR_VERSION == 2 && CV_MINOR_VERSION >=4
+//   BackgroundSubtractorWrap::Init(target);
+//   Features::Init(target);
+// #endif
+// #if ((CV_MAJOR_VERSION == 2) && (CV_MINOR_VERSION >=4) && (CV_SUBMINOR_VERSION>=4))
+//   LDAWrap::Init(target);
+// #endif
+// #endif
+// #ifdef HAVE_OPENCV_FACE
+//   FaceRecognizerWrap::Init(target);
+// #endif
 };
 
 NODE_MODULE(opencv, init)
