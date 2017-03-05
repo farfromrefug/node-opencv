@@ -1,7 +1,7 @@
 {
   "targets": [{
 
-      "target_name": "opencv",
+      "target_name": "<(module_name)",
 
       "sources": [
         "src/init.cc",

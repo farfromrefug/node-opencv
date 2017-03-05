@@ -39,9 +39,9 @@
   },
   "binary": {
     "module_name": "opencv",
-    "module_path": "./build/{module_name}/v{version}/{configuration}/{node_abi}-{platform}-{arch}/",
+    "module_path": "./lib/binding/{configuration}/{node_abi}-{platform}-{arch}/",
     "remote_path": "./{module_name}/v{version}/{configuration}/",
-    "package_name": "{node_abi}-{platform}-{arch}.tar.gz",
-    "host": "https://aryballe-apt.herokuapp.com/files"
+    "package_name": "{module_name}-v{version}-{node_abi}-{platform}-{arch}.tar.gz",
+    "host": "https://nas.aryballe.com/files/node"
   }
 }

@@ -1,0 +1,41 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "0.1.0",
+    "command": "node-gyp",
+    "isShellCommand": true,
+    "showOutput": "always",
+    "suppressTaskName": true,
+    "options": {
+        "env": {
+            "OPENCV_DIR": "C:\\Users\\mguillon\\dev\\3rdparties\\opencv\\2.4.13\\build\\x64\\vc12"
+        }
+    },
+    "tasks": [
+        {
+            "isBuildCommand": true,
+            "taskName": "build",
+            "args": ["rebuild"],
+            "problemMatcher": {
+                "owner": "cpp",
+                "fileLocation": ["relative", "${workspaceRoot}/build"],
+                "pattern": {
+                    "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3,
+                    "severity": 4,
+                    "message": 5
+                }
+            }
+        },
+        {
+            "taskName": "update",
+            "args": ["update"]
+        },
+        {
+            "taskName": "test",
+            "args": ["run", "test"]
+        }
+    ]
+}
