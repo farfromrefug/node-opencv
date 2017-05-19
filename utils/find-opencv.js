@@ -74,6 +74,12 @@ function printPaths(opencvPath) {
         console.log(libs);
       } else {
         var result = '-L' + libPath + ' ';
+        var thirpath = path.join(opencvPath, 'share', 'OpenCV', '3rdparty', 'lib');
+        if (fs.existsSync(thirpath)) {
+            result += '-L' + thirpath + ' ';
+            files = files.concat(fs.readdirSync(thirpath));
+        }
+
         for (var i = 0; i < files.length; i++) {
           var ext = getExtension(files[i]);
           if (ext === 'a') {
