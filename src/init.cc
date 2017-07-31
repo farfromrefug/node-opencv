@@ -26,7 +26,7 @@ extern "C" void init(Local<Object> target) {
   // VideoCaptureWrap::Init(target);
   Contour::Init(target);
   // TrackedObject::Init(target);
-  // NamedWindow::Init(target);
+  NamedWindow::Init(target);
   Constants::Init(target);
   // Calib3D::Init(target);
   // ImgProc::Init(target);
