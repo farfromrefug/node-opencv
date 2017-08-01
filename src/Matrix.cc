@@ -2404,7 +2404,7 @@ NAN_METHOD(Matrix::CvtColor)
 
   // std::cout << "cvtColor " << iTransform << std::endl;
   // cv::Mat image;
-  cv::cvtColor(self->mat, self->mat, iTransform);
+  cv::cvtColor(self->mat, dest->mat, iTransform);
   // Local<Object> result =
   //     Nan::New(Matrix::constructor)->GetFunction()->NewInstance();
   // Matrix *resultmat = Nan::ObjectWrap::Unwrap<Matrix>(result);
