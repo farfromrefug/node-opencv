@@ -3,6 +3,7 @@
 #include "OpenCV.h"
 #include <string.h>
 #include <nan.h>
+#include <iostream>
 
 Nan::Persistent<FunctionTemplate> Matrix::constructor;
 
