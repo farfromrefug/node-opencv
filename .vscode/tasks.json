@@ -8,7 +8,7 @@
     "suppressTaskName": true,
     "options": {
         "env": {
-            "OPENCV_DIR": "C:\\Users\\mguillon\\dev\\3rdparties\\opencv\\2.4.13\\build\\x64\\vc12"
+                        "OPENCV_DIR":"C:\\dev\\opencv-3.2.0\\build\\x64\\vc14"
         }
     },
     "tasks": [
