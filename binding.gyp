@@ -57,6 +57,7 @@
             "-stdlib=libc++",
             "<!@(node utils/find-opencv.js --cflags)",
               ],
+            "OTHER_LDFLAGS":["-framework AppKit"],
             "GCC_ENABLE_CPP_RTTI": "YES",
             "GCC_ENABLE_CPP_EXCEPTIONS": "YES"
           }

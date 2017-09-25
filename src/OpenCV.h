@@ -46,12 +46,12 @@ using namespace node;
   Nan::ThrowError( ERR );
 
 #define INT_FROM_ARGS(NAME, IND) \
-  if (info[IND]->IsInt32()){ \
+  if (info[IND]->IsNumber()){ \
     NAME = info[IND]->Uint32Value(); \
   }
 
 #define DOUBLE_FROM_ARGS(NAME, IND) \
-  if (info[IND]->IsInt32()){ \
+  if (info[IND]->IsNumber()){ \
     NAME = info[IND]->NumberValue(); \
   }
 
@@ -60,6 +60,7 @@ public:
   static void Init(Local<Object> target);
 
   static NAN_METHOD(ReadImage);
+  static NAN_METHOD(ReadImageSync);
 };
 
 #endif
