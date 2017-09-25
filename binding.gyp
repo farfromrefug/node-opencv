@@ -42,6 +42,7 @@
             ],
             "msvs_settings": {
               "VCCLCompilerTool": {
+                'RuntimeLibrary': '1', # /MD
                 "ExceptionHandling": "2",
                 "DisableSpecificWarnings": [ "4530", "4506", "4244" ],
               },
