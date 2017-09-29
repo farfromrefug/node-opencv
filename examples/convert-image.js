@@ -1,21 +1,16 @@
 var cv = require('../lib/opencv');
+var process = require('process');
+var fs = require('fs');
 
-cv.readImage('./files/mona.png', function(err, im) {
-  if (err) throw err;
-  if (im.width() < 1 || im.height() < 1) throw new Error('Image has no size');
 
-  img_hsv = im.copy();
-  img_gray = im.copy();
-
-  img_hsv.convertHSVscale();
-  img_gray.convertGrayscale();
-
-  im.save('./tmp/nor.png');
-  img_hsv.save('./tmp/hsv.png');
-  img_gray.save('./tmp/gray.png');
-
-  img_crop = im.crop(50,50,250,250);
-  img_crop.save('./tmp/crop.png');
-
-  console.log('Image saved to ./tmp/{crop|nor|hsv|gray}.png');
+fs.readFile(process.argv[2], function (err, data) {
+  if (err) {
+    throw err;
+  }
+  var mat16 = new cv.Matrix(480, 640,cv.Constants.CV_16UC1, data);
+  var mat8 = new cv.Matrix(480, 640,cv.Constants.CV_8UC1);
+  mat16.convertTo(mat8, cv.Constants.CV_8UC1, 1/16);
+  // var mat8RGB = new cv.Matrix(480, 640,cv.Constants.CV_8UC1);
+  // mat8.cvtColor(mat8RGB, 'BayerGR2RGB');
+  mat8.save('./image.png');
 });
