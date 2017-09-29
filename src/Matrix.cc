@@ -2249,7 +2249,7 @@ NAN_METHOD(Matrix::ConvertTo)
   {
     DOUBLE_FROM_ARGS(beta, 3);
   }
-  std::cout<< "convertTo " << rtype << " "<< CV_8UC1  << " " << alpha << " " << beta <<std::endl;
+  std::cout<< "convertTo " << rtype << " "<< CV_8U  << " " << alpha << " " << beta <<std::endl;
   self->mat.convertTo(dest->mat, rtype, alpha, beta);
 
   return;
