@@ -5,18 +5,15 @@
   "author": "Peter Braden <peterbraden@peterbraden.co.uk>",
   "dependencies": {
     "buffers": "^0.1.1",
-    "nan": "^2.6.2",
-    "node-pre-gyp": "^0.6.36"
+    "node-pre-gyp": "^0.6.38"
   },
   "devDependencies": {
     "tape": "^3.0.0",
     "aws-sdk": "~2.1.20",
     "glob": "^5.0.3",
+    "nan": "^2.7.0",
     "request": "^2.44.0"
   },
-  "bundledDependencies": [
-    "node-pre-gyp"
-  ],
   "license": "MIT",
   "scripts": {
     "build": "node-gyp build",
