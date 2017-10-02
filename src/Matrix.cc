@@ -75,6 +75,7 @@ void Matrix::Init(Local<Object> target)
   Nan::SetPrototypeMethod(ctor, "moments", Moments);
   Nan::SetPrototypeMethod(ctor, "canny", Canny);
   Nan::SetPrototypeMethod(ctor, "dilate", Dilate);
+  Nan::SetPrototypeMethod(ctor, "divide", Divide);
   Nan::SetPrototypeMethod(ctor, "erode", Erode);
   Nan::SetPrototypeMethod(ctor, "findContours", FindContours);
   Nan::SetPrototypeMethod(ctor, "drawContour", DrawContour);
@@ -1460,6 +1461,19 @@ NAN_METHOD(Matrix::AbsDiff)
 
   info.GetReturnValue().Set(Nan::Null());
 }
+
+NAN_METHOD(Matrix::Divide)
+{
+  Nan::HandleScope scope;
+
+  Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
+  Matrix *src1 = Nan::ObjectWrap::Unwrap<Matrix>(info[0]->ToObject());
+  Matrix *src2 = Nan::ObjectWrap::Unwrap<Matrix>(info[1]->ToObject());
+  cv::divide(src1->mat, src2->mat, self->mat);
+
+  info.GetReturnValue().Set(Nan::Null());
+}
+
 
 NAN_METHOD(Matrix::AddWeighted)
 {
