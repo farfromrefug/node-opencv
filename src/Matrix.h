@@ -74,7 +74,7 @@ public:
   JSFUNC(Abs)
   JSFUNC(Add)
   JSFUNC(Multiply)
-  JSFUNC(Substract)
+  JSFUNC(Subtract)
   JSFUNC(AddWeighted)
   JSFUNC(BitwiseXor)
   JSFUNC(BitwiseNot)
@@ -134,8 +134,6 @@ public:
   JSFUNC(Reshape)
 
   JSFUNC(Release)
-
-  JSFUNC(Subtract)
   /*
    static Handle<Value> Val(const Arguments& info);
    static Handle<Value> RowRange(const Arguments& info);

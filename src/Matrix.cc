@@ -78,7 +78,7 @@ void Matrix::Init(Local<Object> target) {
   Nan::SetPrototypeMethod(ctor, "abs", Abs);
   Nan::SetPrototypeMethod(ctor, "multiply", Multiply);
   Nan::SetPrototypeMethod(ctor, "add", Add);
-  Nan::SetPrototypeMethod(ctor, "substract", Substract);
+  Nan::SetPrototypeMethod(ctor, "subtract", Subtract);
   Nan::SetPrototypeMethod(ctor, "erode", Erode);
   Nan::SetPrototypeMethod(ctor, "findContours", FindContours);
   Nan::SetPrototypeMethod(ctor, "drawContour", DrawContour);
@@ -1368,13 +1368,13 @@ NAN_METHOD(Matrix::Add) {
 }
 
 
-NAN_METHOD(Matrix::Substract) {
+NAN_METHOD(Matrix::Subtract) {
   Nan::HandleScope scope;
 
   Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
   Matrix *src1 = Nan::ObjectWrap::Unwrap<Matrix>(info[0]->ToObject());
   Matrix *src2 = Nan::ObjectWrap::Unwrap<Matrix>(info[1]->ToObject());
-  cv::substract(src1->mat, src2->mat, self->mat);
+  cv::subtract(src1->mat, src2->mat, self->mat);
 
   info.GetReturnValue().Set(Nan::Null());
 }
