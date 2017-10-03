@@ -1327,7 +1327,8 @@ NAN_METHOD(Matrix::Divide) {
   Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
   Matrix *src1 = Nan::ObjectWrap::Unwrap<Matrix>(info[0]->ToObject());
   Matrix *src2 = Nan::ObjectWrap::Unwrap<Matrix>(info[1]->ToObject());
-  double scale = info[3]->IsUndefined() ? 1.0 : info[3]->NumberValue();
+  double scale = info[2]->IsUndefined() ? 1.0 : info[2]->NumberValue();
+  std::cout << "divide " << src1->mat.size().width << "," << src1->mat.size().height << " " << scale << std::endl;  
   cv::divide(src1->mat, src2->mat, self->mat, scale);
 
   info.GetReturnValue().Set(Nan::Null());
@@ -1339,7 +1340,8 @@ NAN_METHOD(Matrix::Multiply) {
   Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
   Matrix *src1 = Nan::ObjectWrap::Unwrap<Matrix>(info[0]->ToObject());
   Matrix *src2 = Nan::ObjectWrap::Unwrap<Matrix>(info[1]->ToObject());
-  double scale = info[3]->IsUndefined() ? 1.0 : info[3]->NumberValue();
+  double scale = info[2]->IsUndefined() ? 1.0 : info[2]->NumberValue();
+  
   cv::multiply(src1->mat, src2->mat, self->mat, scale);
 
   info.GetReturnValue().Set(Nan::Null());
