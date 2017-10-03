@@ -1367,18 +1367,6 @@ NAN_METHOD(Matrix::Add) {
   info.GetReturnValue().Set(Nan::Null());
 }
 
-
-NAN_METHOD(Matrix::Subtract) {
-  Nan::HandleScope scope;
-
-  Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
-  Matrix *src1 = Nan::ObjectWrap::Unwrap<Matrix>(info[0]->ToObject());
-  Matrix *src2 = Nan::ObjectWrap::Unwrap<Matrix>(info[1]->ToObject());
-  cv::subtract(src1->mat, src2->mat, self->mat);
-
-  info.GetReturnValue().Set(Nan::Null());
-}
-
 NAN_METHOD(Matrix::AddWeighted) {
   Nan::HandleScope scope;
 
