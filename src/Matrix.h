@@ -75,6 +75,8 @@ public:
   JSFUNC(Add)
   JSFUNC(Multiply)
   JSFUNC(Subtract)
+  JSFUNC(Min)
+  JSFUNC(Max)
   JSFUNC(AddWeighted)
   JSFUNC(BitwiseXor)
   JSFUNC(BitwiseNot)

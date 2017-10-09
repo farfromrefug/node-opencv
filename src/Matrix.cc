@@ -79,6 +79,8 @@ void Matrix::Init(Local<Object> target) {
   Nan::SetPrototypeMethod(ctor, "multiply", Multiply);
   Nan::SetPrototypeMethod(ctor, "add", Add);
   Nan::SetPrototypeMethod(ctor, "subtract", Subtract);
+  Nan::SetPrototypeMethod(ctor, "min", Min);
+  Nan::SetPrototypeMethod(ctor, "max", Max);
   Nan::SetPrototypeMethod(ctor, "erode", Erode);
   Nan::SetPrototypeMethod(ctor, "findContours", FindContours);
   Nan::SetPrototypeMethod(ctor, "drawContour", DrawContour);
@@ -1365,6 +1367,28 @@ NAN_METHOD(Matrix::Add) {
   Matrix *src1 = Nan::ObjectWrap::Unwrap<Matrix>(info[0]->ToObject());
   Matrix *src2 = Nan::ObjectWrap::Unwrap<Matrix>(info[1]->ToObject());
   cv::add(src1->mat, src2->mat, self->mat);
+
+  info.GetReturnValue().Set(Nan::Null());
+}
+
+NAN_METHOD(Matrix::Min) {
+  Nan::HandleScope scope;
+
+  Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
+  Matrix *src1 = Nan::ObjectWrap::Unwrap<Matrix>(info[0]->ToObject());
+  Matrix *src2 = Nan::ObjectWrap::Unwrap<Matrix>(info[1]->ToObject());
+  cv::min(src1->mat, src2->mat, self->mat);
+
+  info.GetReturnValue().Set(Nan::Null());
+}
+
+NAN_METHOD(Matrix::Max) {
+  Nan::HandleScope scope;
+
+  Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
+  Matrix *src1 = Nan::ObjectWrap::Unwrap<Matrix>(info[0]->ToObject());
+  Matrix *src2 = Nan::ObjectWrap::Unwrap<Matrix>(info[1]->ToObject());
+  cv::max(src1->mat, src2->mat, self->mat);
 
   info.GetReturnValue().Set(Nan::Null());
 }
