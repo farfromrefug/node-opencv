@@ -1,6 +1,7 @@
 #include "OpenCV.h"
 #include "Matrix.h"
 #include <nan.h>
+#include <iostream>
 
 void OpenCV::Init(Local<Object> target)
 {
@@ -13,6 +14,7 @@ void OpenCV::Init(Local<Object> target)
 
   Nan::SetMethod(target, "readImage", ReadImage);
   Nan::SetMethod(target, "readImageSync", ReadImageSync);
+  Nan::SetMethod(target, "mean", Mean);
 }
 
 NAN_METHOD(OpenCV::ReadImage)
@@ -119,4 +121,48 @@ NAN_METHOD(OpenCV::ReadImageSync)
   {
     Nan::ThrowError(e.what());
   }
+}
+
+
+NAN_METHOD(OpenCV::Mean) {
+  Nan::EscapableHandleScope scope;
+  if (!info[0]->IsArray()) {
+    Nan::ThrowTypeError("mean requires an array arg");
+  }
+  int type = -1;
+  if (info.Length() > 1) {
+    type = info[1]->IntegerValue();
+  }
+  Local<Array> array = Local<Array>::Cast(info[0]->ToObject());
+  int count = array->Length();
+  Matrix *currentMat;
+  
+  cv::Mat resultMat;
+  cv::Mat frameConverted;
+  for(int i = 0 ; i < count; i++){
+    currentMat = Nan::ObjectWrap::Unwrap<Matrix>(array->Get(i)->ToObject());
+    if (i == 0) {
+      if (type == -1) {
+        type = currentMat->mat.type();
+      }
+      if (currentMat->mat.type() != type) {
+        currentMat->mat.convertTo(resultMat,type);
+      } else {
+        resultMat = currentMat->mat.clone();
+      }
+    } else {
+      if (currentMat->mat.type() != type) {
+        currentMat->mat.convertTo(frameConverted,type);
+        resultMat += frameConverted;
+      } else {
+        resultMat += currentMat->mat;
+      }
+    }
+  }
+  frameConverted.release();
+  resultMat *= (1.0/count);
+  Local<Object> result = Nan::New(Matrix::constructor)->GetFunction()->NewInstance();
+  Matrix *resultmat = Nan::ObjectWrap::Unwrap<Matrix>(result);
+  resultmat->mat = resultMat;
+  info.GetReturnValue().Set(result);
 }

@@ -1330,7 +1330,6 @@ NAN_METHOD(Matrix::Divide) {
   Matrix *src1 = Nan::ObjectWrap::Unwrap<Matrix>(info[0]->ToObject());
   Matrix *src2 = Nan::ObjectWrap::Unwrap<Matrix>(info[1]->ToObject());
   double scale = info[2]->IsUndefined() ? 1.0 : info[2]->NumberValue();
-  std::cout << "divide " << src1->mat.size().width << "," << src1->mat.size().height << " " << scale << std::endl;  
   cv::divide(src1->mat, src2->mat, self->mat, scale);
 
   info.GetReturnValue().Set(Nan::Null());
