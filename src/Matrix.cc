@@ -2990,9 +2990,9 @@ NAN_METHOD(Matrix::BatchAdjust) {
     cv::Mat image = self->mat;
 
     int channels = image.channels();
-    std::cout << "channels " << channels << std::endl;
-    std::cout << "type " << image.type() << std::endl;
-    std::cout << "depth " << image.depth() << std::endl;
+    // std::cout << "channels " << channels << std::endl;
+    // std::cout << "type " << image.type() << std::endl;
+    // std::cout << "depth " << image.depth() << std::endl;
 
     switch (channels) {
       case 1:
