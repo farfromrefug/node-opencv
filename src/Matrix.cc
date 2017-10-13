@@ -2,6 +2,7 @@
 #include "Contours.h"
 #include "OpenCV.h"
 #include <iostream>
+#include <math.h>
 #include <nan.h>
 #include <string.h>
 
@@ -121,6 +122,7 @@ void Matrix::Init(Local<Object> target) {
   Nan::SetPrototypeMethod(ctor, "reshape", Reshape);
   Nan::SetPrototypeMethod(ctor, "release", Release);
   Nan::SetPrototypeMethod(ctor, "subtract", Subtract);
+  Nan::SetPrototypeMethod(ctor, "batchAdjust", BatchAdjust);
 
   target->Set(Nan::New("Matrix").ToLocalChecked(), ctor->GetFunction());
 };
@@ -2842,4 +2844,203 @@ NAN_METHOD(Matrix::Release) {
   self->mat.release();
 
   return;
+}
+
+float Matrix::AdjustPixel(float value, float contrast, float brightness, float gamma) {
+  float x;
+  float result = value;
+  // if (contrast != 0) {
+  //   // float realContrast = contrast * 255;
+  //   float factor = (259.0f * (contrast * 255.0f + 255.0f)) / (255.0f * (259.0f - contrast * 255.0f));
+  //   result = factor * (result - 128) + 128;
+  // }
+    if (gamma != 1) {
+      result = pow(result / 255.0, gamma) * 255.0;
+    }
+  if (brightness < 0.0) {
+    result = result * (1.0 + brightness);
+  } else if (brightness > 0) {
+    result = result + ((255.0 - result) * brightness);
+  }
+
+  if (contrast < 0) {
+      x = (result > 127) ? 1 - result / 255 : result / 255;
+      if (x < 0) x = 0;
+      x = 0.5 * pow(x * 2, 1 + contrast);
+      result = (result > 127) ? (1.0 - x) * 255 : x * 255;
+  } else if (contrast > 0) {
+      x = (result > 127) ? 1 - result / 255 : result / 255;
+      if (x < 0) x = 0;
+      x = 0.5 * pow(2 * x, ((contrast >= 1) ? 127 : 1 / (1 - contrast)));
+      result = (result > 127) ? (1 - x) * 255 : x * 255;
+  }
+
+  
+  // std::cout << "AdjustPixel" << value << " " << contrast << " " << brightness
+  // << " " << result << std::endl;
+
+  return result;
+}
+
+/**
+ * Changes the shape and/or the number of channels of a 2D matrix without
+ * copying the data.
+ * Reference:http://docs.opencv.org/2.4/modules/core/doc/basic_structures.html#mat-reshape
+ */
+NAN_METHOD(Matrix::BatchAdjust) {
+  SETUP_FUNCTION(Matrix)
+  float contrast = 0;
+  float brightness = 0;
+  float gamma = 1;
+  bool histogram = false;
+  bool equalizeHist = false;
+  // int histLength = 256;
+  int *histChannels;
+  int *histSizes;
+  float **histRanges;
+  bool histUniform = true;
+  bool histAccumulate = false;
+  bool histNormalize = true;
+  cv::Mat histMask;
+  if (info[0]->IsObject()) {
+    v8::Handle<v8::Object> options = v8::Local<v8::Object>::Cast(info[0]);
+    if (options->Has(Nan::New<String>("contrast").ToLocalChecked())) {
+      contrast = options->Get(Nan::New<String>("contrast").ToLocalChecked())
+                     ->NumberValue();
+    }
+    if (options->Has(Nan::New<String>("brightness").ToLocalChecked())) {
+      brightness = options->Get(Nan::New<String>("brightness").ToLocalChecked())
+                       ->NumberValue();
+    }
+    if (options->Has(Nan::New<String>("gamma").ToLocalChecked())) {
+      gamma = options->Get(Nan::New<String>("gamma").ToLocalChecked())
+                       ->NumberValue();
+    }
+    if (options->Has(Nan::New<String>("equalizeHist").ToLocalChecked())) {
+      equalizeHist = options->Get(Nan::New<String>("equalizeHist").ToLocalChecked())
+                       ->BooleanValue();
+    }
+    if (options->Has(Nan::New<String>("histogram").ToLocalChecked())) {
+      histogram = true;
+
+      Local<Object> histOptions =
+          options->Get(Nan::New<String>("histogram").ToLocalChecked())
+              ->ToObject();
+      if (histOptions->Has(Nan::New<String>("channels").ToLocalChecked())) {
+        Local<Array> array = Local<Array>::Cast(
+            histOptions->Get(Nan::New<String>("channels").ToLocalChecked())
+                ->ToObject());
+        histChannels = new int[array->Length()];
+        for (unsigned int i = 0; i < array->Length(); i++) {
+          histChannels[i] = array->Get(i)->IntegerValue();
+        }
+      }
+      if (histOptions->Has(Nan::New<String>("mask").ToLocalChecked())) {
+        Matrix *m_mask = Nan::ObjectWrap::Unwrap<Matrix>(
+            histOptions->Get(Nan::New<String>("mask").ToLocalChecked())
+                ->ToObject());
+        histMask = m_mask->mat;
+      } else {
+        histMask = cv::Mat();
+      }
+      if (histOptions->Has(Nan::New<String>("sizes").ToLocalChecked())) {
+
+        Local<Array> array = Local<Array>::Cast(
+            histOptions->Get(Nan::New<String>("sizes").ToLocalChecked())
+                ->ToObject());
+        histSizes = new int[array->Length()];
+        for (unsigned int i = 0; i < array->Length(); i++) {
+          histSizes[i] = array->Get(i)->IntegerValue();
+        }
+      }
+      if (histOptions->Has(Nan::New<String>("ranges").ToLocalChecked())) {
+
+        Local<Array> array = Local<Array>::Cast(
+            histOptions->Get(Nan::New<String>("ranges").ToLocalChecked())
+                ->ToObject());
+        float *range = new float[array->Length()];
+        for (unsigned int i = 0; i < array->Length(); i++) {
+          range[i] = array->Get(i)->NumberValue();
+        }
+        histRanges = new float *[1];
+        histRanges[0] = range;
+        // histRanges = {range};
+      }
+      if (histOptions->Has(Nan::New<String>("uniform").ToLocalChecked())) {
+        histUniform =
+            histOptions->Get(Nan::New<String>("uniform").ToLocalChecked())
+                ->BooleanValue();
+      }
+      if (histOptions->Has(Nan::New<String>("accumulate").ToLocalChecked())) {
+        histAccumulate =
+            histOptions->Get(Nan::New<String>("accumulate").ToLocalChecked())
+                ->BooleanValue();
+      }
+      if (histOptions->Has(Nan::New<String>("normalize").ToLocalChecked())) {
+        histNormalize =
+            histOptions->Get(Nan::New<String>("normalize").ToLocalChecked())
+                ->BooleanValue();
+      }
+    }
+  }
+  if (equalizeHist) {
+    cv::equalizeHist(self->mat, self->mat);
+  }
+  if (contrast != 0 || brightness != 0) {
+    cv::Mat image = self->mat;
+
+    int channels = image.channels();
+    std::cout << "channels " << channels << std::endl;
+    std::cout << "type " << image.type() << std::endl;
+    std::cout << "depth " << image.depth() << std::endl;
+
+    switch (channels) {
+      case 1:
+      {
+          // Single colour
+          cv::MatIterator_<uchar> it, end;
+          for (it = image.begin<uchar>(), end = image.end<uchar>(); it != end; ++it)
+              *it = AdjustPixel(*it, contrast, brightness, gamma);
+          break;
+      }
+      case 3:
+      case 4:
+      {
+          // RGB Color
+          cv::MatIterator_<cv::Vec3b> it, end;
+          for (it = image.begin<cv::Vec3b>(), end = image.end<cv::Vec3b>(); it != end; ++it) {
+              (*it)[2] = AdjustPixel((*it)[2], contrast, brightness, gamma);
+              (*it)[1] = AdjustPixel((*it)[1], contrast, brightness, gamma);
+              (*it)[0] = AdjustPixel((*it)[0], contrast, brightness, gamma);
+          }
+          break;
+      }
+      }
+  }
+  if (histogram) {
+    cv::Mat hist;
+    cv::calcHist(&self->mat, 1, histChannels, histMask, hist, 1, histSizes,
+                 (const float **)histRanges, histUniform, histAccumulate);
+
+    if (histNormalize) {
+      cv::normalize(hist, hist, 0, self->mat.rows, cv::NORM_MINMAX, -1,
+                    cv::Mat());
+    }
+
+    Local<Object> result =
+        Nan::New(Matrix::constructor)->GetFunction()->NewInstance();
+    Matrix *resultmat = Nan::ObjectWrap::Unwrap<Matrix>(result);
+    resultmat->mat = hist;
+
+    Local<Object> res = Nan::New<Object>();
+    Local<Object> histo = Nan::New<Object>();
+
+    histo->Set(Nan::New("mean").ToLocalChecked(),
+               Nan::New<Number>(round(cv::mean(self->mat)[0])));
+    histo->Set(Nan::New("data").ToLocalChecked(), result);
+    res->Set(Nan::New("histo").ToLocalChecked(), histo);
+    info.GetReturnValue().Set(res);
+  } else {
+    info.GetReturnValue().Set(Nan::Null());
+  }
 }

@@ -16,6 +16,7 @@ public:
 ~Matrix();
 
   static double DblGet(cv::Mat mat, int i, int j);
+  static float AdjustPixel(float value, float contrast, float brightness, float gamma);
 
   JSFUNC(Zeros)  // factory
   JSFUNC(Ones)  // factory
@@ -136,6 +137,7 @@ public:
   JSFUNC(Reshape)
 
   JSFUNC(Release)
+  JSFUNC(BatchAdjust)
   /*
    static Handle<Value> Val(const Arguments& info);
    static Handle<Value> RowRange(const Arguments& info);
