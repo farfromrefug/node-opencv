@@ -18,9 +18,18 @@ declare module "opencv" {
                 ext?: string;
             }
         );
+        saveAsync(
+            dest: string,
+            callback: (err: Error) => void,
+            params?: {
+                ext?: string;
+            }
+        );
         toBuffer(params: { ext?: string });
+        batchAdjust(params): Matrix;
         put(buffer: Buffer);
         copy(): Matrix;
+        clone(): Matrix;
         min(mat1: Matrix, mat2: Matrix): Matrix;
         max(mat1: Matrix, mat2: Matrix): Matrix;
         subtract(mat1: Matrix, mat2: Matrix): Matrix;
