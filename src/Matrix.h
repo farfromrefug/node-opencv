@@ -138,6 +138,7 @@ public:
 
   JSFUNC(Release)
   JSFUNC(BatchAdjust)
+  JSFUNC(LinePixels)
   /*
    static Handle<Value> Val(const Arguments& info);
    static Handle<Value> RowRange(const Arguments& info);

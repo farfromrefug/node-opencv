@@ -123,6 +123,7 @@ void Matrix::Init(Local<Object> target) {
   Nan::SetPrototypeMethod(ctor, "release", Release);
   Nan::SetPrototypeMethod(ctor, "subtract", Subtract);
   Nan::SetPrototypeMethod(ctor, "batchAdjust", BatchAdjust);
+  Nan::SetPrototypeMethod(ctor, "linePixels", LinePixels);
 
   target->Set(Nan::New("Matrix").ToLocalChecked(), ctor->GetFunction());
 };
@@ -3042,5 +3043,38 @@ NAN_METHOD(Matrix::BatchAdjust) {
     info.GetReturnValue().Set(res);
   } else {
     info.GetReturnValue().Set(Nan::Null());
+  }
+}
+
+
+NAN_METHOD(Matrix::LinePixels) {
+  SETUP_FUNCTION(Matrix)
+  int x1 = 0;
+  int y1 = 0;
+  int x2 = 0;
+  int y2 = 0;
+  if (info.Length() == 4) {
+    INT_FROM_ARGS(x1, 0);
+    INT_FROM_ARGS(y1, 1);
+    INT_FROM_ARGS(x2, 2);
+    INT_FROM_ARGS(y2, 3);
+
+    cv::LineIterator it(self->mat, cv::Point(x1, y1), cv::Point(x2, y2), 8);
+
+    std::cout << "LinePixels " << x1 << " " << y1 << " " << x2 << " "
+            << y2 << " " <<  it.count <<  std::endl;
+    // vector<Vec3b> buf(it.count);
+    v8::Local<v8::Array> arr = Nan::New<Array>(it.count);
+    for(int i = 0; i < it.count; i++, ++it) {
+      cv::Vec3b val = self->mat.at<cv::Vec3b>(it.pos());
+      v8::Local<v8::Array> pt = Nan::New<Array>(3);
+      pt->Set(0, Nan::New<Number>((double)val[0]));
+      pt->Set(1, Nan::New<Number>((double)val[1]));
+      pt->Set(2, Nan::New<Number>((double)val[2]));
+      arr->Set(i, pt);
+    }
+    info.GetReturnValue().Set(arr);
+  } else {
+    JSTHROW("Invalid number of arguments");
   }
 }
