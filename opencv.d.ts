@@ -25,6 +25,7 @@ declare module "opencv" {
                 ext?: string;
             }
         );
+        size():[number, number]
         toBuffer(params: { ext?: string });
         batchAdjust(params): {histo:{data:Matrix, mean:number}};
         put(buffer: Buffer);
