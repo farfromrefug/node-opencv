@@ -1,6 +1,7 @@
 declare module "opencv" {
     class Matrix {
         constructor(height: number, width: number, channels?: number);
+        release();
         mean(): number;
         width(): number;
         height(): number;
