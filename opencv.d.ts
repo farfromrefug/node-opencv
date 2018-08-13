@@ -38,7 +38,7 @@ declare module "opencv" {
         resize(width: number, height: number): Matrix;
         divide(mat1: Matrix, mat2: Matrix, factor?: number): Matrix;
         convertTo(mat1: Matrix, type: number, factor?: number): Matrix;
-        linePixels(x1, y1, x2, y2): [number,number,number][];
+        linePixels(x1, y1, x2, y2): (number[] | number)[];
     }
     function mean(mats: Matrix[], channels: number): Matrix;
     function readImageSync(buffer: Buffer): Matrix;

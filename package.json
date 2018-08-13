@@ -1,6 +1,6 @@
 {
   "name": "opencv",
-  "version": "6.1.10",
+  "version": "6.1.11",
   "types": "./opencv.d.ts",
   "description": "Node Bindings to OpenCV",
   "author": "Peter Braden <peterbraden@peterbraden.co.uk>",

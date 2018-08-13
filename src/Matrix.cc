@@ -3057,23 +3057,29 @@ NAN_METHOD(Matrix::LinePixels) {
     INT_FROM_ARGS(x1, 0);
     INT_FROM_ARGS(y1, 1);
     INT_FROM_ARGS(x2, 2);
-    INT_FROM_ARGS(y2, 3);
-
+    INT_FROM_ARGS(y2, 3); 
+    int channels = self->mat.channels();
     cv::LineIterator it(self->mat, cv::Point(x1, y1), cv::Point(x2, y2), 8);
 
-    std::cout << "LinePixels " << x1 << " " << y1 << " " << x2 << " "
-            << y2 << " " <<  it.count <<  std::endl;
+    // std::cout << "LinePixels1 " << x1 << " " << y1 << " " << x2 << " "
+            // << y2 << " " <<  it.count <<  std::endl;
     // vector<Vec3b> buf(it.count);
-    v8::Local<v8::Array> arr = Nan::New<Array>(it.count);
+    v8::Local<v8::Array> pixels = Nan::New<Array>(it.count);
     for(int i = 0; i < it.count; i++, ++it) {
-      cv::Vec3b val = self->mat.at<cv::Vec3b>(it.pos());
-      v8::Local<v8::Array> pt = Nan::New<Array>(3);
-      pt->Set(0, Nan::New<Number>((double)val[0]));
-      pt->Set(1, Nan::New<Number>((double)val[1]));
-      pt->Set(2, Nan::New<Number>((double)val[2]));
-      arr->Set(i, pt);
+      if (channels == 3) {
+        cv::Vec3b val = self->mat.at<cv::Vec3b>(it.pos());
+
+        v8::Local<v8::Array> pt = Nan::New<v8::Array>(3);
+        pt->Set(0, Nan::New<Number>(val[0]));
+        pt->Set(1, Nan::New<Number>(val[1]));
+        pt->Set(2, Nan::New<Number>(val[2]));
+        pixels->Set(i, pt);
+      } else if (channels == 1) {
+        uchar v = self->mat.at<uchar>(it.pos());
+        pixels->Set(i, Nan::New<Number>(v));
+      }
     }
-    info.GetReturnValue().Set(arr);
+    info.GetReturnValue().Set(pixels);
   } else {
     JSTHROW("Invalid number of arguments");
   }
