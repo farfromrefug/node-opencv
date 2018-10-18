@@ -354,7 +354,7 @@ NAN_METHOD(Matrix::GetData) {
       buf, Nan::New<Integer>((unsigned)size), Nan::New<Integer>(0)};
   MaybeLocal<Object> actualBuffer = Nan::NewInstance(bufferConstructor, 3, constructorArgs);
 
-  info.GetReturnValue().Set(actualBuffer);
+  info.GetReturnValue().Set(actualBuffer.ToLocalChecked());
 }
 
 NAN_METHOD(Matrix::Brightness) {
@@ -521,10 +521,10 @@ NAN_METHOD(Matrix::Clone) {
 
   MaybeLocal<Object> im_h = Nan::NewInstance(Nan::New(Matrix::constructor)->GetFunction());
 
-  Matrix *m = Nan::ObjectWrap::Unwrap<Matrix>(im_h);
+  Matrix *m = Nan::ObjectWrap::Unwrap<Matrix>(im_h.ToLocalChecked());
   m->mat = self->mat.clone();
 
-  info.GetReturnValue().Set(im_h);
+  info.GetReturnValue().Set(im_h.ToLocalChecked());
 }
 
 NAN_METHOD(Matrix::Crop) {
@@ -696,9 +696,9 @@ NAN_METHOD(Matrix::ToBuffer) {
   Local<Value> constructorArgs[3] = {
       buf, Nan::New<Integer>((unsigned)vec.size()),
       Nan::New<Integer>(0)};
-  Local<Object> actualBuffer = Nan::NewInstance(bufferConstructor, 3, constructorArgs);
+  MaybeLocal<v8::Object> actualBuffer = Nan::NewInstance(bufferConstructor, 3, constructorArgs);
 
-  info.GetReturnValue().Set(actualBuffer);
+  info.GetReturnValue().Set(actualBuffer.ToLocalChecked());
 }
 
 class AsyncToBufferWorker : public Nan::AsyncWorker {
@@ -729,9 +729,9 @@ public:
     Local<Value> constructorArgs[3] = {
         buf, Nan::New<Integer>((unsigned)res.size()),
         Nan::New<Integer>(0)};
-    Local<Object> actualBuffer = Nan::NewInstance(bufferConstructor, 3, constructorArgs);
+    MaybeLocal<v8::Object> actualBuffer = Nan::NewInstance(bufferConstructor, 3, constructorArgs);
 
-    Local<Value> argv[] = {Nan::Null(), actualBuffer};
+    Local<Value> argv[] = {Nan::Null(), actualBuffer.ToLocalChecked()};
 
     Nan::TryCatch try_catch;
     callback->Call(2, argv);
