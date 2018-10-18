@@ -265,7 +265,7 @@ NAN_METHOD(Matrix::Pixel) {
     if (self->mat.channels() == 3) {
       cv::Vec3b intensity = self->mat.at<cv::Vec3b>(y, x);
 
-      v8::Local<v8::Array> arr = Nan::New<v8::Array>(3);
+      Local<Array> arr = Nan::New<Array>(3);
       arr->Set(0, Nan::New<Number>(intensity[0]));
       arr->Set(1, Nan::New<Number>(intensity[1]));
       arr->Set(2, Nan::New<Number>(intensity[2]));
@@ -347,13 +347,12 @@ NAN_METHOD(Matrix::GetData) {
   uchar *data = (uchar *)Buffer::Data(buf);
   memcpy(data, self->mat.data, size);
 
-  v8::Local<v8::Object> globalObj = Nan::GetCurrentContext()->Global();
-  v8::Local<v8::Function> bufferConstructor = v8::Local<v8::Function>::Cast(
+  Local<Object> globalObj = Nan::GetCurrentContext()->Global();
+  Local<Function> bufferConstructor = Local<Function>::Cast(
       globalObj->Get(Nan::New<String>("Buffer").ToLocalChecked()));
-  v8::Local<v8::Value> constructorArgs[3] = {
-      buf, Nan::New<v8::Integer>((unsigned)size), Nan::New<v8::Integer>(0)};
-  v8::Local<v8::Object> actualBuffer =
-      bufferConstructor->NewInstance(3, constructorArgs);
+  Local<Value> constructorArgs[3] = {
+      buf, Nan::New<Integer>((unsigned)size), Nan::New<Integer>(0)};
+  MaybeLocal<Object> actualBuffer = Nan::NewInstance(bufferConstructor, 3, constructorArgs);
 
   info.GetReturnValue().Set(actualBuffer);
 }
@@ -510,7 +509,7 @@ NAN_METHOD(Matrix::Norm) {
 NAN_METHOD(Matrix::Size) {
   SETUP_FUNCTION(Matrix)
 
-  v8::Local<v8::Array> arr = Nan::New<Array>(2);
+  Local<Array> arr = Nan::New<Array>(2);
   arr->Set(0, Nan::New<Number>(self->mat.size().height));
   arr->Set(1, Nan::New<Number>(self->mat.size().width));
 
@@ -520,8 +519,7 @@ NAN_METHOD(Matrix::Size) {
 NAN_METHOD(Matrix::Clone) {
   SETUP_FUNCTION(Matrix)
 
-  Local<Object> im_h =
-      Nan::New(Matrix::constructor)->GetFunction()->NewInstance();
+  MaybeLocal<Object> im_h = Nan::NewInstance(Nan::New(Matrix::constructor)->GetFunction());
 
   Matrix *m = Nan::ObjectWrap::Unwrap<Matrix>(im_h);
   m->mat = self->mat.clone();
@@ -559,7 +557,7 @@ NAN_METHOD(Matrix::Row) {
 
   int width = self->mat.size().width;
   int y = info[0]->IntegerValue();
-  v8::Local<v8::Array> arr = Nan::New<Array>(width);
+  Local<Array> arr = Nan::New<Array>(width);
 
   for (int x = 0; x < width; x++) {
     double v = Matrix::DblGet(self->mat, y, x);
@@ -574,7 +572,7 @@ NAN_METHOD(Matrix::PixelRow) {
 
   int width = self->mat.size().width;
   int y = info[0]->IntegerValue();
-  v8::Local<v8::Array> arr = Nan::New<Array>(width * 3);
+  Local<Array> arr = Nan::New<Array>(width * 3);
 
   for (int x = 0; x < width; x++) {
     cv::Vec3b pixel = self->mat.at<cv::Vec3b>(y, x);
@@ -592,7 +590,7 @@ NAN_METHOD(Matrix::Col) {
 
   int height = self->mat.size().height;
   int x = info[0]->IntegerValue();
-  v8::Local<v8::Array> arr = Nan::New<Array>(height);
+  Local<Array> arr = Nan::New<Array>(height);
 
   for (int y = 0; y < height; y++) {
     double v = Matrix::DblGet(self->mat, y, x);
@@ -606,7 +604,7 @@ NAN_METHOD(Matrix::PixelCol) {
 
   int height = self->mat.size().height;
   int x = info[0]->IntegerValue();
-  v8::Local<v8::Array> arr = Nan::New<Array>(height * 3);
+  Local<Array> arr = Nan::New<Array>(height * 3);
 
   for (int y = 0; y < height; y++) {
     cv::Vec3b pixel = self->mat.at<cv::Vec3b>(y, x);
@@ -659,10 +657,10 @@ NAN_METHOD(Matrix::ToBuffer) {
   // See if the options argument is passed
   if ((info.Length() > 0) && (info[0]->IsObject())) {
     // Get this options argument
-    v8::Handle<v8::Object> options = v8::Local<v8::Object>::Cast(info[0]);
+    Handle<Object> options = Local<Object>::Cast(info[0]);
     // If the extension (image format) is provided
     if (options->Has(Nan::New<String>("ext").ToLocalChecked())) {
-      v8::String::Utf8Value str(
+      String::Utf8Value str(
           options->Get(Nan::New<String>("ext").ToLocalChecked())->ToString());
       optExt = *str;
       ext = (const char *)optExt.c_str();
@@ -692,14 +690,13 @@ NAN_METHOD(Matrix::ToBuffer) {
   uchar *data = (uchar *)Buffer::Data(buf);
   memcpy(data, &vec[0], vec.size());
 
-  v8::Local<v8::Object> globalObj = Nan::GetCurrentContext()->Global();
-  v8::Local<v8::Function> bufferConstructor = v8::Local<v8::Function>::Cast(
+  Local<Object> globalObj = Nan::GetCurrentContext()->Global();
+  Local<Function> bufferConstructor = Local<Function>::Cast(
       globalObj->Get(Nan::New<String>("Buffer").ToLocalChecked()));
-  v8::Local<v8::Value> constructorArgs[3] = {
-      buf, Nan::New<v8::Integer>((unsigned)vec.size()),
-      Nan::New<v8::Integer>(0)};
-  v8::Local<v8::Object> actualBuffer =
-      bufferConstructor->NewInstance(3, constructorArgs);
+  Local<Value> constructorArgs[3] = {
+      buf, Nan::New<Integer>((unsigned)vec.size()),
+      Nan::New<Integer>(0)};
+  Local<Object> actualBuffer = Nan::NewInstance(bufferConstructor, 3, constructorArgs);
 
   info.GetReturnValue().Set(actualBuffer);
 }
@@ -726,14 +723,13 @@ public:
     uchar *data = (uchar *)Buffer::Data(buf);
     memcpy(data, &res[0], res.size());
 
-    v8::Local<v8::Object> globalObj = Nan::GetCurrentContext()->Global();
-    v8::Local<v8::Function> bufferConstructor = v8::Local<v8::Function>::Cast(
+    Local<Object> globalObj = Nan::GetCurrentContext()->Global();
+    Local<Function> bufferConstructor = Local<Function>::Cast(
         globalObj->Get(Nan::New<String>("Buffer").ToLocalChecked()));
-    v8::Local<v8::Value> constructorArgs[3] = {
-        buf, Nan::New<v8::Integer>((unsigned)res.size()),
-        Nan::New<v8::Integer>(0)};
-    v8::Local<v8::Object> actualBuffer =
-        bufferConstructor->NewInstance(3, constructorArgs);
+    Local<Value> constructorArgs[3] = {
+        buf, Nan::New<Integer>((unsigned)res.size()),
+        Nan::New<Integer>(0)};
+    Local<Object> actualBuffer = Nan::NewInstance(bufferConstructor, 3, constructorArgs);
 
     Local<Value> argv[] = {Nan::Null(), actualBuffer};
 
@@ -762,10 +758,10 @@ NAN_METHOD(Matrix::ToBufferAsync) {
   // See if the options argument is passed
   if ((info.Length() > 1) && (info[1]->IsObject())) {
     // Get this options argument
-    v8::Handle<v8::Object> options = v8::Local<v8::Object>::Cast(info[1]);
+    Handle<Object> options = Local<Object>::Cast(info[1]);
     // If the extension (image format) is provided
     if (options->Has(Nan::New<String>("ext").ToLocalChecked())) {
-      v8::String::Utf8Value str(
+      String::Utf8Value str(
           options->Get(Nan::New<String>("ext").ToLocalChecked())->ToString());
       std::string str2 = std::string(*str);
       ext = str2;
@@ -808,7 +804,7 @@ NAN_METHOD(Matrix::Ellipse) {
   int shift = 0;
 
   if (info[0]->IsObject()) {
-    v8::Handle<v8::Object> options = v8::Local<v8::Object>::Cast(info[0]);
+    Handle<Object> options = Local<Object>::Cast(info[0]);
     if (options->Has(Nan::New<String>("center").ToLocalChecked())) {
       Local<Object> center =
           options->Get(Nan::New<String>("center").ToLocalChecked())->ToObject();
@@ -1257,7 +1253,7 @@ NAN_METHOD(Matrix::Flip) {
         "(0 = X axis, positive = Y axis, negative = both axis)");
   }
 
-  int flipCode = info[0]->ToInt32()->Value();
+  int flipCode = info[0]->Int32Value();
 
   Local<Object> img_to_return =
       Nan::New(Matrix::constructor)->GetFunction()->NewInstance();
@@ -1641,10 +1637,10 @@ NAN_METHOD(Matrix::GoodFeaturesToTrack) {
   equalizeHist(gray, gray);
 
   cv::goodFeaturesToTrack(gray, corners, 500, 0.01, 10);
-  v8::Local<v8::Array> arr = Nan::New<Array>(corners.size());
+  Local<Array> arr = Nan::New<Array>(corners.size());
 
   for (unsigned int i = 0; i < corners.size(); i++) {
-    v8::Local<v8::Array> pt = Nan::New<Array>(2);
+    Local<Array> pt = Nan::New<Array>(2);
     pt->Set(0, Nan::New<Number>((double)corners[i].x));
     pt->Set(1, Nan::New<Number>((double)corners[i].y));
     arr->Set(i, pt);
@@ -1671,10 +1667,10 @@ NAN_METHOD(Matrix::HoughLinesP) {
   cv::HoughLinesP(gray, lines, rho, theta, threshold, minLineLength,
                   maxLineGap);
 
-  v8::Local<v8::Array> arr = Nan::New<Array>(lines.size());
+  Local<Array> arr = Nan::New<Array>(lines.size());
 
   for (unsigned int i = 0; i < lines.size(); i++) {
-    v8::Local<v8::Array> pt = Nan::New<Array>(4);
+    Local<Array> pt = Nan::New<Array>(4);
     pt->Set(0, Nan::New<Number>((double)lines[i][0]));
     pt->Set(1, Nan::New<Number>((double)lines[i][1]));
     pt->Set(2, Nan::New<Number>((double)lines[i][2]));
@@ -1706,10 +1702,10 @@ NAN_METHOD(Matrix::HoughCircles) {
   cv::HoughCircles(gray, circles, CV_HOUGH_GRADIENT, dp, minDist,
                    higherThreshold, accumulatorThreshold, minRadius, maxRadius);
 
-  v8::Local<v8::Array> arr = Nan::New<Array>(circles.size());
+  Local<Array> arr = Nan::New<Array>(circles.size());
 
   for (unsigned int i = 0; i < circles.size(); i++) {
-    v8::Local<v8::Array> pt = Nan::New<Array>(3);
+    Local<Array> pt = Nan::New<Array>(3);
     pt->Set(0, Nan::New<Number>((double)circles[i][0])); // center x
     pt->Set(1, Nan::New<Number>((double)circles[i][1])); // center y
     pt->Set(2, Nan::New<Number>((double)circles[i][2])); // radius
@@ -1938,7 +1934,7 @@ NAN_METHOD(Matrix::LocateROI) {
 
   self->mat.locateROI(wholeSize, ofs);
 
-  v8::Local<v8::Array> arr = Nan::New<Array>(4);
+  Local<Array> arr = Nan::New<Array>(4);
   arr->Set(0, Nan::New<Number>(wholeSize.width));
   arr->Set(1, Nan::New<Number>(wholeSize.height));
   arr->Set(2, Nan::New<Number>(ofs.x));
@@ -2140,7 +2136,7 @@ NAN_METHOD(Matrix::CvtColor) {
   int iTransform = 0;
   if (info[1]->IsString()) {
     // Get transform string
-    v8::String::Utf8Value str(info[1]->ToString());
+    String::Utf8Value str(info[1]->ToString());
     std::string str2 = std::string(*str);
     const char *sTransform = (const char *)str2.c_str();
 
@@ -2236,7 +2232,7 @@ NAN_METHOD(Matrix::Split) {
 
   cv::split(self->mat, channels);
   size = channels.size();
-  v8::Local<v8::Array> arrChannels = Nan::New<Array>(size);
+  Local<Array> arrChannels = Nan::New<Array>(size);
   for (unsigned int i = 0; i < size; i++) {
     Local<Object> matObject =
         Nan::New(Matrix::constructor)->GetFunction()->NewInstance();
@@ -2257,7 +2253,7 @@ NAN_METHOD(Matrix::Merge) {
   if (!info[0]->IsArray()) {
     Nan::ThrowTypeError("The argument must be an array");
   }
-  v8::Local<v8::Array> jsChannels = v8::Local<v8::Array>::Cast(info[0]);
+  Local<Array> jsChannels = Local<Array>::Cast(info[0]);
 
   unsigned int L = jsChannels->Length();
   std::vector<cv::Mat> vChannels(L);
@@ -2410,7 +2406,7 @@ NAN_METHOD(Matrix::TemplateMatches) {
   }
 
   cv::Mat hit_mask = cv::Mat::zeros(self->mat.size(), CV_64F);
-  v8::Local<v8::Array> probabilites_array = Nan::New<v8::Array>(limit);
+  Local<Array> probabilites_array = Nan::New<Array>(limit);
 
   cv::Mat_<float>::const_iterator begin = self->mat.begin<float>();
   cv::Mat_<int>::const_iterator it = indices.begin();
@@ -2489,7 +2485,7 @@ NAN_METHOD(Matrix::MatchTemplate) {
 
   Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
 
-  v8::String::Utf8Value args0(info[0]->ToString());
+  String::Utf8Value args0(info[0]->ToString());
   std::string filename = std::string(*args0);
   cv::Mat templ;
   templ = cv::imread(filename, -1);
@@ -2542,7 +2538,7 @@ NAN_METHOD(Matrix::MatchTemplate) {
 
   m_out->mat.convertTo(m_out->mat, CV_8UC1, 255, 0);
 
-  v8::Local<v8::Array> arr = Nan::New<v8::Array>(5);
+  Local<Array> arr = Nan::New<Array>(5);
   arr->Set(0, out);
   arr->Set(1, Nan::New<Number>(roi_x));
   arr->Set(2, Nan::New<Number>(roi_y));
@@ -2745,7 +2741,7 @@ NAN_METHOD(Matrix::MeanWithMask) {
   Matrix *mask = Nan::ObjectWrap::Unwrap<Matrix>(info[0]->ToObject());
 
   cv::Scalar means = cv::mean(self->mat, mask->mat);
-  v8::Local<v8::Array> arr = Nan::New<Array>(4);
+  Local<Array> arr = Nan::New<Array>(4);
   arr->Set(0, Nan::New<Number>(means[0]));
   arr->Set(1, Nan::New<Number>(means[1]));
   arr->Set(2, Nan::New<Number>(means[2]));
@@ -2758,7 +2754,7 @@ NAN_METHOD(Matrix::Mean) {
   SETUP_FUNCTION(Matrix)
 
   cv::Scalar means = cv::mean(self->mat);
-  v8::Local<v8::Array> arr = Nan::New<Array>(4);
+  Local<Array> arr = Nan::New<Array>(4);
   arr->Set(0, Nan::New<Number>(means[0]));
   arr->Set(1, Nan::New<Number>(means[1]));
   arr->Set(2, Nan::New<Number>(means[2]));
@@ -2904,7 +2900,7 @@ NAN_METHOD(Matrix::BatchAdjust) {
   bool histNormalize = true;
   cv::Mat histMask;
   if (info[0]->IsObject()) {
-    v8::Handle<v8::Object> options = v8::Local<v8::Object>::Cast(info[0]);
+    Handle<Object> options = Local<Object>::Cast(info[0]);
     if (options->Has(Nan::New<String>("contrast").ToLocalChecked())) {
       contrast = options->Get(Nan::New<String>("contrast").ToLocalChecked())
                      ->NumberValue();
@@ -3064,12 +3060,12 @@ NAN_METHOD(Matrix::LinePixels) {
     // std::cout << "LinePixels1 " << x1 << " " << y1 << " " << x2 << " "
             // << y2 << " " <<  it.count <<  std::endl;
     // vector<Vec3b> buf(it.count);
-    v8::Local<v8::Array> pixels = Nan::New<Array>(it.count);
+    Local<Array> pixels = Nan::New<Array>(it.count);
     for(int i = 0; i < it.count; i++, ++it) {
       if (channels == 3) {
         cv::Vec3b val = self->mat.at<cv::Vec3b>(it.pos());
 
-        v8::Local<v8::Array> pt = Nan::New<v8::Array>(3);
+        Local<Array> pt = Nan::New<Array>(3);
         pt->Set(0, Nan::New<Number>(val[0]));
         pt->Set(1, Nan::New<Number>(val[1]));
         pt->Set(2, Nan::New<Number>(val[2]));

@@ -1,0 +1,81 @@
+Arguments: 
+  /usr/local/bin/node /usr/local/bin/yarn
+
+PATH: 
+  /Volumes/data/mguillon/Downloads/google-cloud-sdk/bin:/Volumes/data/mguillon/bin:/Library/Java/JavaVirtualMachines/jdk1.8.0_141.jdk/Contents/Home/bin:/Volumes/data/dev/androidSDK/platform-tools:/Volumes/data/dev/androidSDK/tools:/Volumes/data/dev/androidNDK/r16b:/usr/local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin:/Library/Frameworks/Mono.framework/Versions/Current/Commands:/Applications/Wireshark.app/Contents/MacOS:/Volumes/data/mguillon/Downloads/google-cloud-sdk/bin:/Volumes/data/mguillon/bin:/Library/Java/JavaVirtualMachines/jdk1.8.0_141.jdk/Contents/Home/bin:/Volumes/data/dev/androidSDK/platform-tools:/Volumes/data/dev/androidSDK/tools:/Volumes/data/dev/androidNDK/r16b
+
+Yarn version: 
+  1.9.4
+
+Node version: 
+  9.11.2
+
+Platform: 
+  darwin x64
+
+Trace: 
+  Error: https://registry.yarnpkg.com/aws-: Not found
+      at Request.params.callback [as _callback] (/usr/local/lib/node_modules/yarn/lib/cli.js:64202:18)
+      at Request.self.callback (/usr/local/lib/node_modules/yarn/lib/cli.js:137468:22)
+      at Request.emit (events.js:180:13)
+      at Request.<anonymous> (/usr/local/lib/node_modules/yarn/lib/cli.js:138440:10)
+      at Request.emit (events.js:180:13)
+      at IncomingMessage.<anonymous> (/usr/local/lib/node_modules/yarn/lib/cli.js:138362:12)
+      at Object.onceWrapper (events.js:272:13)
+      at IncomingMessage.emit (events.js:185:15)
+      at endReadableNT (_stream_readable.js:1106:12)
+      at process._tickCallback (internal/process/next_tick.js:178:19)
+
+npm manifest: 
+  {
+    "name": "opencv",
+    "version": "6.1.12",
+    "types": "./opencv.d.ts",
+    "description": "Node Bindings to OpenCV",
+    "author": "Peter Braden <peterbraden@peterbraden.co.uk>",
+    "dependencies": {
+      "bindings": "farfromrefug/node-bindings",
+      "buffers": "^0.1.1",
+      "node-pre-gyp": "0.11.0",
+      "nan": "^2.11.0"
+    },
+    "devDependencies": {
+      "tape": "^3.0.0",
+      "aws-": "~2.1.20",
+      "glob": "^5.0.3",
+      "request": "^2.88.0"
+    },
+    "license": "MIT",
+    "scripts": {
+      "build": "node-gyp build",
+      "test": "node test/unit.js",
+      "install": "node-pre-gyp install --fallback-to-build"
+    },
+    "keywords": [
+      "opencv",
+      "computer",
+      "vision",
+      "quadrocopter"
+    ],
+    "main": "./lib/opencv",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/peterbraden/node-opencv.git"
+    },
+    "engines": {
+      "node": ">=0.12"
+    },
+    "binary": {
+      "module_name": "opencv",
+      "module_path": "./lib/binding/{configuration}/{node_abi}-{platform}-{arch}/",
+      "remote_path": "./{module_name}/v{version}/{configuration}/",
+      "package_name": "{module_name}-v{version}-{node_abi}-{platform}-{arch}.tar.gz",
+      "host": "https://nas.aryballe.com/files/node"
+    }
+  }
+
+yarn manifest: 
+  No manifest
+
+Lockfile: 
+  No lockfile
