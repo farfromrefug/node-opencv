@@ -1,5 +1,7 @@
 #include "OpenCV.h"
 
+#ifdef HAVE_OPENCV_HIGHGUI
+
 class NamedWindow: public Nan::ObjectWrap {
 public:
   std::string winname;
@@ -14,6 +16,9 @@ public:
   JSFUNC(Show)
   ;JSFUNC(Destroy)
   ;JSFUNC(BlockingWaitKey)
+  ;JSFUNC(ResizeWindow)
   ;
 
 };
+
+#endif

@@ -4,6 +4,9 @@
 #define CONST(C) \
   obj->Set(Nan::New<String>(#C).ToLocalChecked(), Nan::New<Integer>(C));
 
+#define CONST_INT(C) \
+  obj->Set(Nan::New<String>(#C).ToLocalChecked(), Nan::New<Integer>((int)C));
+
 #define CONST_DOUBLE(C) \
   obj->Set(Nan::New<String>(#C).ToLocalChecked(), Nan::New<Number>(C));
 
@@ -59,6 +62,17 @@ void Constants::Init(Local<Object> target) {
   CONST(CV_64FC3);
   CONST(CV_64FC4);
 
+  CONST(CV_LOAD_IMAGE_UNCHANGED);
+  CONST(CV_LOAD_IMAGE_GRAYSCALE);
+  CONST(CV_LOAD_IMAGE_COLOR);
+  CONST(CV_LOAD_IMAGE_ANYDEPTH);
+  CONST(CV_LOAD_IMAGE_ANYCOLOR);
+  
+  // this is 3.2+ only
+  #if ((CV_MAJOR_VERSION == 3) && (CV_MINOR_VERSION >=2))
+  CONST(CV_LOAD_IMAGE_IGNORE_ORIENTATION);
+  #endif
+  
   CONST_DOUBLE(CV_PI);
   CONST(CV_FILLED);
 
@@ -89,6 +103,25 @@ void Constants::Init(Local<Object> target) {
   CONST_ENUM(RETR_LIST);
   CONST_ENUM(RETR_CCOMP);
   CONST_ENUM(RETR_TREE);
+
+  CONST_INT(CV_DIST_C);
+  CONST_INT(CV_DIST_L1);
+  CONST_INT(CV_DIST_L2);
+  CONST_INT(CV_DIST_USER);
+
+  CONST_INT(CV_DIST_MASK_3);
+  CONST_INT(CV_DIST_MASK_5);
+  CONST_INT(CV_DIST_MASK_PRECISE);
+
+  CONST_ENUM(CMP_EQ)
+  CONST_ENUM(CMP_GT)
+  CONST_ENUM(CMP_GE)
+  CONST_ENUM(CMP_LT)
+  CONST_ENUM(CMP_LE)
+  CONST_ENUM(CMP_NE)
+
+  target->Set(Nan::New("TERM_CRITERIA_EPS").ToLocalChecked(), Nan::New<Integer>((int)cv::TermCriteria::EPS));
+  target->Set(Nan::New("TERM_CRITERIA_COUNT").ToLocalChecked(), Nan::New<Integer>((int)cv::TermCriteria::COUNT));
 
   target->Set(Nan::New("Constants").ToLocalChecked(), obj);
 }

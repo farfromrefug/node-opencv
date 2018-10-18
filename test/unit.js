@@ -61,8 +61,8 @@ test('Matrix constructor', function(assert){
 
 test('Matrix accessors', function(assert){
   var mat = new cv.Matrix(1, 2);
-  mat.set(0,0,3)
-  mat.set(0,1,5000)
+  mat.set(0,0,3);
+  mat.set(0,1,5000);
   assert.deepEqual(mat.row(0), [3,5000]);
 
   mat = new cv.Matrix(1,2);
@@ -103,8 +103,10 @@ test('Matrix functions', function(assert) {
   // convertTo
   var mat = new cv.Matrix(75, 75, cv.Constants.CV_32F, [2.0]);
   var matNew = new cv.Matrix(75, 75, cv.Constants.CV_8U);
-  mat.convertTo(matNew, cv.Constants.CV_8U, 2, 1);
-  assert.equal(matNew.pixel(0, 0), 5);
+  var alpha = 2;
+  var beta = 1;
+  mat.convertTo(matNew, cv.Constants.CV_8U, alpha, beta);
+  assert.equal(matNew.pixel(0, 0), mat.get(0, 0)*alpha + beta);
 
   // reshape
   mat = new cv.Matrix(75, 75, cv.Constants.CV_8UC1);
@@ -127,7 +129,6 @@ test(".norm", function(assert){
 
       var errorL2 = im.norm(im2, cv.Constants.NORM_L2);
       assert.equal(errorL2, 7295.591339980605);
-
       errorL2 = im.norm(im, cv.Constants.NORM_L2);
       assert.equal(errorL2, 0);
       assert.end();
@@ -215,6 +216,36 @@ test("Image read from file", function(assert){
   })
 })
 
+test("Multi-page image read from file", function(assert){
+  if (parseInt(cv.version) >= 3) {
+    cv.readImageMulti("./examples/files/multipage.tif", function(err, imgs){
+      assert.ok(imgs);
+      assert.equal(imgs.length, 10);
+      for (var i = 0; i < imgs.length; i++) {
+        assert.ok(imgs[i]);
+        assert.equal(imgs[i].width(), 800);
+        assert.equal(imgs[i].height(), 600);
+        assert.equal(imgs[i].channels(), 3);
+        assert.equal(imgs[i].empty(), false);
+      }
+      assert.end();
+    })
+  } else {
+    assert.equal(cv.readImageMulti("./examples/files/multipage.tif"), false);
+    assert.end();
+  }
+})
+
+test("Distance transform", function(assert){
+  cv.readImage("./examples/files/distanceTransform.png", function(err, img){
+    assert.ok(img);
+
+    // 50px image with single black pixel on right side
+    var result = cv.imgproc.distanceTransform(img, cv.Constants.CV_DIST_L2, cv.Constants.CV_DIST_MASK_PRECISE);
+    assert.equal(result.get(0,0), 49);
+    assert.end();
+  })
+})
 
 test("read Image from buffer", function(assert){
   cv.readImage(fs.readFileSync('./examples/files/opencv.png'), function(err, im){
@@ -336,7 +367,7 @@ test('LDA Wrap', function(assert) {
 
 
 test('Native Matrix', function(assert) {
-  var nativemat = require('../build/Release/test_nativemat.node');
+  var nativemat = require('../build/' + (!!process.env.NODE_OPENCV_DEBUG ? 'Debug' : 'Release') + '/test_nativemat.node');
   var mat = new cv.Matrix(42, 8);
 
   assert.deepEqual(mat.size(), nativemat.size(mat), 'nativemat');
@@ -366,7 +397,160 @@ test('Mean', function(assert) {
   assert.end();
 });
 
+test('Compare', function(assert) {
+  var a = cv.Matrix.fromArray([[[0],[-20]],[[2],[-18]]], cv.Constants.CV_8SC1);
+  var b = cv.Matrix.fromArray([[[3],[-20]],[[0],[-16]]], cv.Constants.CV_8SC1);
+
+  var compare1 = a.compare(b, cv.Constants.CMP_EQ);
+  var compare2 = a.compare(b, cv.Constants.CMP_GT);
+  var compare3 = a.compare(b, cv.Constants.CMP_LE);
+
+  assert.deepEqual(compare1.toArray(), [[[0],[255]],[[0],[0]]]);
+  assert.deepEqual(compare2.toArray(), [[[0],[0]],[[255],[0]]]);
+  assert.deepEqual(compare3.toArray(), [[[255],[255]],[[0],[255]]]);
+
+  assert.end();
+});
+
+test('MatchTemplateByMatrix', function(assert) {
+  var cv = require('../lib/opencv');
+  var targetFilename = "./examples/files/car1.jpg";
+  var templateFilename = "./examples/files/car1_template.jpg";
+  cv.readImage(targetFilename, function(err, target){
+    cv.readImage(templateFilename, function(err, template){
+      var TM_CCORR_NORMED = 3;
+      var res = target.matchTemplateByMatrix(template, TM_CCORR_NORMED);
+      var minMax = res.minMaxLoc();
+      var topLeft = minMax.maxLoc;
+      assert.ok(topLeft, "RGB Found Match");
+      assert.equal(topLeft.x, 42, "match location x === 42");
+      assert.equal(topLeft.y, 263, "match location y === 263");
+      target.canny(5,300);
+      template.canny(5,300);
+      res = target.matchTemplateByMatrix(template, TM_CCORR_NORMED);
+      minMax = res.minMaxLoc();
+      topLeft = minMax.maxLoc;
+      assert.ok(topLeft, "Canny edge Found Match");
+      assert.equal(topLeft.x, 42, "match location x === 42");
+      assert.equal(topLeft.y, 263, "match location y === 263");
+      assert.end();
+    });
+  })
+});
+
+test('setColor works will alpha channels', function(assert) {
+  var cv = require('../lib/opencv');
+  var mat = new cv.Matrix(100, 100, cv.Constants.CV_8UC4);
+
+  var SQUARE = [ 50, 50 ];
+  mat.rectangle([ 0, 0 ], SQUARE, [ 0, 187, 255, 255 ], -1);
+  mat.rectangle([ 0, 50 ], SQUARE, [ 0, 187, 124, 200 ], -1);
+  mat.rectangle([ 50, 0 ], SQUARE, [ 241, 161, 0, 128 ], -1);
+  mat.rectangle([ 50, 50 ], SQUARE, [ 20, 83, 246, 70 ], -1);
+
+  cv.readImage('./examples/files/alpha-test.png', function(err, imgMat) {
+    if (!err) {
+      var diff = new cv.Matrix();
+      diff.absDiff(mat, imgMat);
+      // We'll verify that each channel is 0
+      var channels = diff.split();
+      for (var i = 0; i < 4; i++) {
+        assert.equal(channels[i].countNonZero(), 0);
+      }
+    } else {
+      throw err;
+    }
+    assert.end();
+  });
+});
+
+test('getPixel',function(assert){
+  cv.readImage('./examples/files/alpha-test.png', function(err, imgMat) {
+    if (!err) {
+      assert.equal(imgMat.channels(),4);
+      assert.deepEqual(imgMat.getPixel(10,10),[0,187,255,255]);
+      assert.deepEqual(imgMat.getPixel(30,80),[241,161,0,128]);
+      assert.deepEqual(imgMat.getPixel(80,30),[0,187,124,200]);
+      assert.deepEqual(imgMat.getPixel(80,80),[20,83,246,70]);
+
+      var channels = imgMat.split();
+      imgMat.merge([channels[0],channels[1],channels[2]]);
+      assert.equal(imgMat.channels(),3);
+      assert.deepEqual(imgMat.getPixel(10,10),[0,187,255]);
+      assert.deepEqual(imgMat.getPixel(30,80),[241,161,0]);
+      assert.deepEqual(imgMat.getPixel(80,30),[0,187,124]);
+      assert.deepEqual(imgMat.getPixel(80,80),[20,83,246]);
+
+      imgMat.merge([channels[3]]);
+      assert.equal(imgMat.channels(),1);
+      assert.deepEqual(imgMat.getPixel(0,0),255);
+      assert.deepEqual(imgMat.getPixel(30,80),128);
+      assert.deepEqual(imgMat.getPixel(80,30),200);
+      assert.deepEqual(imgMat.getPixel(80,80),70);
+
+    } else {
+      throw err;
+    }
+    assert.end();
+  });
+});
+
+test('pixelRow pixelCol 4 channel image ',function(assert){
+  cv.readImage('./examples/files/alpha-small.png', function(err, imgMat) {
+    if (!err) {
+      assert.equal(imgMat.channels(),4);
+
+      assert.deepEqual(imgMat.pixelCol(0),
+        [ 0, 0,   0, 255,
+          0, 255, 0, 88,
+          0, 0,   0, 88 ]);
+
+      assert.deepEqual(imgMat.pixelCol(1),
+        [ 255, 255, 255, 255,
+          0,   0,   255, 88,
+          255, 255, 255, 88 ]);
+
+      assert.deepEqual(imgMat.pixelRow(0),
+        [ 0,   0,   0,   255,
+          255, 255, 255, 255,
+          0,   255, 0,   255,
+          255, 0,   0,   255,
+          0,   0,   255, 255,
+          229, 194, 201, 155 ]);
+
+      assert.deepEqual(imgMat.pixelRow(1),
+        [ 0,   255, 0,   88,
+          0,   0,   255, 88,
+          255, 0,   0,   88,
+          47,  40,  42,  155,
+          145, 66,  125, 227,
+          47,  100, 163, 72 ]);
+    } else {
+      throw err;
+    }
+    assert.end();
+  });
+});
+
+
+test('toArray/fromArray working in both ways', function(assert) {
+  var cv = require('../lib/opencv');
+
+  cv.readImage("./examples/files/mona.png", function(err, orig) {
+    if (err) throw err;
+
+    var a = orig.toArray();
+    var type = orig.type();
+    var doubleConversion = cv.Matrix.fromArray(a, type).toArray();
+
+    var randomI = Math.floor(Math.random()*a.length)
+    var randomJ = Math.floor(Math.random()*a[randomI].length)
+    var randomK = Math.floor(Math.random()*a[randomI][randomJ].length)
+
+    assert.equal(a[randomI][randomJ][randomK], doubleConversion[randomI][randomJ][randomK]);
+    assert.end();
+  });
+});
+
 // Test the examples folder.
 require('./examples')()
-
-

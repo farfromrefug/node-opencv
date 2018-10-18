@@ -7,10 +7,22 @@
         "src/init.cc",
         "src/Matrix.cc",
         "src/OpenCV.cc",
+        "src/CascadeClassifierWrap.cc",
         "src/Contours.cc",
         "src/Point.cc",
+        "src/VideoCaptureWrap.cc",
+        "src/VideoWriterWrap.cc",
+        "src/CamShift.cc",
         "src/HighGUI.cc",
-        "src/Constants.cc"
+        "src/FaceRecognizer.cc",
+        "src/Features2d.cc",
+        "src/BackgroundSubtractor.cc",
+        "src/Constants.cc",
+        "src/Calib3D.cc",
+        "src/ImgProc.cc",
+        "src/Stereo.cc",
+        "src/LDAWrap.cc",
+        "src/Histogram.cc",        
       ],
 
       "libraries": [
@@ -51,18 +63,42 @@
         [ # cflags on OS X are stupid and have to be defined like this
           "OS==\"mac\"", {
             "xcode_settings": {
-            "OTHER_CFLAGS": [
-              "-mmacosx-version-min=10.7",
-            "-std=c++11",
-            "-stdlib=libc++",
-            "<!@(node utils/find-opencv.js --cflags)",
+              "OTHER_CFLAGS": [
+                "-mmacosx-version-min=10.7",
+                "-std=c++11",
+                "-stdlib=libc++",
+                "<!@(node utils/find-opencv.js --cflags)",
               ],
             "OTHER_LDFLAGS":["-framework AppKit"],
-            "GCC_ENABLE_CPP_RTTI": "YES",
-            "GCC_ENABLE_CPP_EXCEPTIONS": "YES"
+              "GCC_ENABLE_CPP_RTTI": "YES",
+              "GCC_ENABLE_CPP_EXCEPTIONS": "YES"
+            }
           }
-        }]
-    ]
+        ]
+    ],
+
+    "configurations": {
+        # This is used for generating code coverage with the `--debug` argument
+        "Debug": {
+          "conditions": [
+            ['OS=="linux"', {
+              "cflags": ["-coverage"],
+              "ldflags": ["-coverage"]
+            }],
+            ['OS=="mac"', {
+              "xcode_settings": {
+                "OTHER_CFLAGS": [
+                  "-fprofile-arcs -ftest-coverage",
+                ],
+                "OTHER_LDFLAGS": [
+                  "--coverage"
+                ]
+              }
+            }]
+
+          ]
+        },
+    }
   },
   {
       "target_name": "test_nativemat",
@@ -111,10 +147,10 @@
             "xcode_settings": {
             "OTHER_CFLAGS": [
               "-mmacosx-version-min=10.7",
-            "-std=c++11",
-            "-stdlib=libc++",
-            "<!@(node utils/find-opencv.js --cflags)",
-              ],
+              "-std=c++11",
+              "-stdlib=libc++",
+              "<!@(node utils/find-opencv.js --cflags)",
+            ],
             "GCC_ENABLE_CPP_RTTI": "YES",
             "GCC_ENABLE_CPP_EXCEPTIONS": "YES"
           }

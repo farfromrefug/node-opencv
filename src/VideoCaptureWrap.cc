@@ -4,6 +4,8 @@
 
 #include  <iostream>
 
+#ifdef HAVE_OPENCV_VIDEOIO
+
 Nan::Persistent<FunctionTemplate> VideoCaptureWrap::constructor;
 
 struct videocapture_baton {
@@ -30,11 +32,15 @@ void VideoCaptureWrap::Init(Local<Object> target) {
   Nan::SetPrototypeMethod(ctor, "read", Read);
   Nan::SetPrototypeMethod(ctor, "setWidth", SetWidth);
   Nan::SetPrototypeMethod(ctor, "setHeight", SetHeight);
+  Nan::SetPrototypeMethod(ctor, "getWidth", GetWidth);
+  Nan::SetPrototypeMethod(ctor, "getHeight", GetHeight);
   Nan::SetPrototypeMethod(ctor, "setPosition", SetPosition);
   Nan::SetPrototypeMethod(ctor, "getFrameAt", GetFrameAt);
   Nan::SetPrototypeMethod(ctor, "getFrameCount", GetFrameCount);
-  Nan::SetPrototypeMethod(ctor, "close", Close);
-  Nan::SetPrototypeMethod(ctor, "ReadSync", ReadSync);
+  Nan::SetPrototypeMethod(ctor, "getFPS", GetFPS);
+  Nan::SetPrototypeMethod(ctor, "setFPS", SetFPS);
+  Nan::SetPrototypeMethod(ctor, "release", Release);
+  Nan::SetPrototypeMethod(ctor, "readSync", ReadSync);
   Nan::SetPrototypeMethod(ctor, "grab", Grab);
   Nan::SetPrototypeMethod(ctor, "retrieve", Retrieve);
 
@@ -79,6 +85,15 @@ VideoCaptureWrap::VideoCaptureWrap(const std::string& filename) {
   }
 }
 
+NAN_METHOD(VideoCaptureWrap::GetWidth) {
+  Nan::HandleScope scope;
+  VideoCaptureWrap *v = Nan::ObjectWrap::Unwrap<VideoCaptureWrap>(info.This());
+
+  int cnt = int(v->cap.get(CV_CAP_PROP_FRAME_WIDTH));
+
+  info.GetReturnValue().Set(Nan::New<Number>(cnt));
+}
+
 NAN_METHOD(VideoCaptureWrap::SetWidth) {
   Nan::HandleScope scope;
   VideoCaptureWrap *v = Nan::ObjectWrap::Unwrap<VideoCaptureWrap>(info.This());
@@ -99,6 +114,41 @@ NAN_METHOD(VideoCaptureWrap::GetFrameCount) {
   VideoCaptureWrap *v = Nan::ObjectWrap::Unwrap<VideoCaptureWrap>(info.This());
 
   int cnt = int(v->cap.get(CV_CAP_PROP_FRAME_COUNT));
+
+  info.GetReturnValue().Set(Nan::New<Number>(cnt));
+}
+
+
+NAN_METHOD(VideoCaptureWrap::GetFPS) {
+  Nan::HandleScope scope;
+  VideoCaptureWrap *v = Nan::ObjectWrap::Unwrap<VideoCaptureWrap>(info.This());
+
+  int fps = int(v->cap.get(CV_CAP_PROP_FPS));
+
+  info.GetReturnValue().Set(Nan::New<Number>(fps)); 
+}
+
+NAN_METHOD(VideoCaptureWrap::SetFPS) {
+  Nan::HandleScope scope;
+  VideoCaptureWrap *v = Nan::ObjectWrap::Unwrap<VideoCaptureWrap>(info.This());
+
+  if (info.Length() > 0) {
+    if (info[0]->IsNumber()) {
+        int fps = info[0]->IntegerValue();
+        v->cap.set(CV_CAP_PROP_FPS, fps);
+    }
+  }
+  
+  int fps = int(v->cap.get(CV_CAP_PROP_FPS));
+
+  info.GetReturnValue().Set(Nan::New<Number>(fps)); 
+}
+
+NAN_METHOD(VideoCaptureWrap::GetHeight) {
+  Nan::HandleScope scope;
+  VideoCaptureWrap *v = Nan::ObjectWrap::Unwrap<VideoCaptureWrap>(info.This());
+
+  int cnt = int(v->cap.get(CV_CAP_PROP_FRAME_HEIGHT));
 
   info.GetReturnValue().Set(Nan::New<Number>(cnt));
 }
@@ -145,7 +195,7 @@ NAN_METHOD(VideoCaptureWrap::GetFrameAt) {
   return;
 }
 
-NAN_METHOD(VideoCaptureWrap::Close) {
+NAN_METHOD(VideoCaptureWrap::Release) {
   Nan::HandleScope scope;
   VideoCaptureWrap *v = Nan::ObjectWrap::Unwrap<VideoCaptureWrap>(info.This());
 
@@ -187,9 +237,8 @@ public:
   void HandleOKCallback() {
     Nan::HandleScope scope;
 
-    Local<Object> im_to_return= Nan::New(Matrix::constructor)->GetFunction()->NewInstance();
-    Matrix *img = Nan::ObjectWrap::Unwrap<Matrix>(im_to_return);
-    img->mat = mat;
+    Local<Object> im_to_return = Matrix::CreateWrappedFromMat(mat);
+    mat.release();
 
     Local<Value> argv[] = {
       Nan::Null()
@@ -226,10 +275,10 @@ NAN_METHOD(VideoCaptureWrap::ReadSync) {
   Nan::HandleScope scope;
   VideoCaptureWrap *v = Nan::ObjectWrap::Unwrap<VideoCaptureWrap>(info.This());
 
-  Local<Object> im_to_return= Nan::New(Matrix::constructor)->GetFunction()->NewInstance();
-  Matrix *img = Nan::ObjectWrap::Unwrap<Matrix>(im_to_return);
+  cv::Mat outputmat = cv::Mat();
+  v->cap.read(outputmat);
 
-  v->cap.read(img->mat);
+  Local<Object> im_to_return = Matrix::CreateWrappedFromMat(outputmat);
 
   info.GetReturnValue().Set(im_to_return);
 }
@@ -279,3 +328,5 @@ NAN_METHOD(VideoCaptureWrap::Retrieve) {
 
   return;
 }
+
+#endif

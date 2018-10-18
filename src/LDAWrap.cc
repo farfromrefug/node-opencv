@@ -1,7 +1,12 @@
 #include "OpenCV.h"
 
 #if CV_MAJOR_VERSION >= 3
+#ifdef __GNUC__
 #warning TODO: port me to OpenCV 3
+#else
+// vs style message pragma
+#pragma message ( "TODO: port me to OpenCV 3" )
+#endif
 #endif
 
 #if ((CV_MAJOR_VERSION == 2) && (CV_MINOR_VERSION >=4) && (CV_SUBMINOR_VERSION>=4))
@@ -61,9 +66,7 @@ NAN_METHOD(LDAWrap::SubspaceProject) {
 
   cv::Mat m = cv::subspaceProject(w->mat, mean->mat, src->mat);
 
-  Local<Object> im = Nan::New(Matrix::constructor)->GetFunction()->NewInstance();
-  Matrix *img = Nan::ObjectWrap::Unwrap<Matrix>(im);
-  img->mat = m;
+  Local<Object> im = Matrix::CreateWrappedFromMat(m);
 
   info.GetReturnValue().Set(im);
 }
@@ -87,9 +90,7 @@ NAN_METHOD(LDAWrap::SubspaceReconstruct) {
 
   cv::Mat m = cv::subspaceReconstruct(w->mat, mean->mat, src->mat);
 
-  Local<Object> im = Nan::New(Matrix::constructor)->GetFunction()->NewInstance();
-  Matrix *img = Nan::ObjectWrap::Unwrap<Matrix>(im);
-  img->mat = m;
+  Local<Object> im = Matrix::CreateWrappedFromMat(m);
 
   info.GetReturnValue().Set(im);
 }

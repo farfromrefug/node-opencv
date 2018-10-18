@@ -1,5 +1,7 @@
 #include "OpenCV.h"
 
+#ifdef HAVE_OPENCV_VIDEOIO
+
 class VideoCaptureWrap: public Nan::ObjectWrap {
 public:
   cv::VideoCapture cap;
@@ -17,6 +19,10 @@ public:
   static NAN_METHOD(Grab);
   static NAN_METHOD(Retrieve);
 
+  // For getting width and height of the input video stream
+  static NAN_METHOD(GetWidth);
+  static NAN_METHOD(GetHeight);
+
   // (Optional) For setting width and height of the input video stream
   static NAN_METHOD(SetWidth);
   static NAN_METHOD(SetHeight);
@@ -25,9 +31,13 @@ public:
   static NAN_METHOD(SetPosition);
   static NAN_METHOD(GetFrameCount);
 
+  static NAN_METHOD(GetFPS);
+  static NAN_METHOD(SetFPS);
+
   static NAN_METHOD(GetFrameAt);
 
-  //close the stream
-  static NAN_METHOD(Close);
+  // release the stream
+  static NAN_METHOD(Release);
 };
 
+#endif

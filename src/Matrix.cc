@@ -10,12 +10,12 @@ Nan::Persistent<FunctionTemplate> Matrix::constructor;
 
 cv::Scalar setColor(Local<Object> objColor);
 cv::Point setPoint(Local<Object> objPoint);
-cv::Rect *setRect(Local<Object> objRect, cv::Rect &result);
+cv::Rect* setRect(Local<Object> objRect, cv::Rect &result);
 
 void Matrix::Init(Local<Object> target) {
   Nan::HandleScope scope;
 
-  // Class
+  //Class
   Local<FunctionTemplate> ctor = Nan::New<FunctionTemplate>(Matrix::New);
   constructor.Reset(ctor);
   ctor->InstanceTemplate()->SetInternalFieldCount(1);
@@ -28,6 +28,7 @@ void Matrix::Init(Local<Object> target) {
   Nan::SetPrototypeMethod(ctor, "pixelCol", PixelCol);
   Nan::SetPrototypeMethod(ctor, "empty", Empty);
   Nan::SetPrototypeMethod(ctor, "get", Get);
+  Nan::SetPrototypeMethod(ctor, "getPixel", GetPixel);
   Nan::SetPrototypeMethod(ctor, "set", Set);
   Nan::SetPrototypeMethod(ctor, "put", Put);
   Nan::SetPrototypeMethod(ctor, "brightness", Brightness);
@@ -37,6 +38,7 @@ void Matrix::Init(Local<Object> target) {
   Nan::SetPrototypeMethod(ctor, "pixel", Pixel);
   Nan::SetPrototypeMethod(ctor, "width", Width);
   Nan::SetPrototypeMethod(ctor, "height", Height);
+  Nan::SetPrototypeMethod(ctor, "type", Type);
   Nan::SetPrototypeMethod(ctor, "size", Size);
   Nan::SetPrototypeMethod(ctor, "clone", Clone);
   Nan::SetPrototypeMethod(ctor, "crop", Crop);
@@ -67,7 +69,10 @@ void Matrix::Init(Local<Object> target) {
   Nan::SetPrototypeMethod(ctor, "roi", ROI);
   Nan::SetPrototypeMethod(ctor, "ptr", Ptr);
   Nan::SetPrototypeMethod(ctor, "absDiff", AbsDiff);
+  Nan::SetPrototypeMethod(ctor, "dct", Dct);
+  Nan::SetPrototypeMethod(ctor, "idct", Idct);
   Nan::SetPrototypeMethod(ctor, "addWeighted", AddWeighted);
+  Nan::SetPrototypeMethod(ctor, "add", Add);
   Nan::SetPrototypeMethod(ctor, "bitwiseXor", BitwiseXor);
   Nan::SetPrototypeMethod(ctor, "bitwiseNot", BitwiseNot);
   Nan::SetPrototypeMethod(ctor, "bitwiseAnd", BitwiseAnd);
@@ -87,8 +92,10 @@ void Matrix::Init(Local<Object> target) {
   Nan::SetPrototypeMethod(ctor, "drawContour", DrawContour);
   Nan::SetPrototypeMethod(ctor, "drawAllContours", DrawAllContours);
   Nan::SetPrototypeMethod(ctor, "goodFeaturesToTrack", GoodFeaturesToTrack);
+  #ifdef HAVE_OPENCV_VIDEO
+  Nan::SetPrototypeMethod(ctor, "calcOpticalFlowPyrLK", CalcOpticalFlowPyrLK);
+  #endif
   Nan::SetPrototypeMethod(ctor, "houghLinesP", HoughLinesP);
-  Nan::SetPrototypeMethod(ctor, "crop", Crop);
   Nan::SetPrototypeMethod(ctor, "houghCircles", HoughCircles);
   Nan::SetPrototypeMethod(ctor, "inRange", inRange);
   Nan::SetPrototypeMethod(ctor, "adjustROI", AdjustROI);
@@ -103,6 +110,7 @@ void Matrix::Init(Local<Object> target) {
   Nan::SetPrototypeMethod(ctor, "calcHist", CalcHist);
   Nan::SetPrototypeMethod(ctor, "floodFill", FloodFill);
   Nan::SetPrototypeMethod(ctor, "matchTemplate", MatchTemplate);
+  Nan::SetPrototypeMethod(ctor, "matchTemplateByMatrix", MatchTemplateByMatrix);
   Nan::SetPrototypeMethod(ctor, "templateMatches", TemplateMatches);
   Nan::SetPrototypeMethod(ctor, "minMaxLoc", MinMaxLoc);
   Nan::SetPrototypeMethod(ctor, "pushBack", PushBack);
@@ -120,10 +128,17 @@ void Matrix::Init(Local<Object> target) {
   Nan::SetPrototypeMethod(ctor, "mean", Mean);
   Nan::SetPrototypeMethod(ctor, "shift", Shift);
   Nan::SetPrototypeMethod(ctor, "reshape", Reshape);
+// leave this out - can't see a way it could be useful to us, as release() always completely forgets the data
+//  Nan::SetPrototypeMethod(ctor, "addref", Addref);
   Nan::SetPrototypeMethod(ctor, "release", Release);
+  Nan::SetPrototypeMethod(ctor, "getrefCount", GetrefCount);
   Nan::SetPrototypeMethod(ctor, "subtract", Subtract);
   Nan::SetPrototypeMethod(ctor, "batchAdjust", BatchAdjust);
   Nan::SetPrototypeMethod(ctor, "linePixels", LinePixels);
+  Nan::SetPrototypeMethod(ctor, "compare", Compare);
+  Nan::SetPrototypeMethod(ctor, "mul", Mul);
+  Nan::SetPrototypeMethod(ctor, "div", Div);
+  Nan::SetPrototypeMethod(ctor, "pow", Pow);
 
   target->Set(Nan::New("Matrix").ToLocalChecked(), ctor->GetFunction());
 };
@@ -143,17 +158,17 @@ NAN_METHOD(Matrix::New) {
   } else if (info.Length() == 3 && info[0]->IsInt32() && info[1]->IsInt32() &&
              info[2]->IsInt32()) {
     mat = new Matrix(info[0]->IntegerValue(), info[1]->IntegerValue(),
-                     info[2]->IntegerValue());
+        info[2]->IntegerValue());
   } else if (info.Length() == 4 && info[0]->IsInt32() && info[1]->IsInt32() &&
-             info[2]->IsInt32() && info[3]->IsArray()) {
+        info[2]->IsInt32() && info[3]->IsArray()) {
     mat = new Matrix(info[0]->IntegerValue(), info[1]->IntegerValue(),
-                     info[2]->IntegerValue(), info[3]->ToObject());
+        info[2]->IntegerValue(), info[3]->ToObject());
   } else if (info.Length() == 4 && info[0]->IsInt32() && info[1]->IsInt32() &&
              info[2]->IsInt32() && Buffer::HasInstance(info[3])) {
     mat = new Matrix(info[0]->IntegerValue(), info[1]->IntegerValue(),
                      info[2]->IntegerValue(), Buffer::Data(info[3]),
                      Buffer::Length(info[3]));
-  } else { // if (info.Length() == 5) {
+  } else {  // if (info.Length() == 5) {
     Matrix *other = Nan::ObjectWrap::Unwrap<Matrix>(info[0]->ToObject());
     int x = info[1]->IntegerValue();
     int y = info[2]->IntegerValue();
@@ -166,15 +181,50 @@ NAN_METHOD(Matrix::New) {
   info.GetReturnValue().Set(info.Holder());
 }
 
-Matrix::Matrix() : node_opencv::Matrix() { mat = cv::Mat(); }
+//Convenience factory method for creating a wrapped Matrix from a cv::Mat and tracking external memory correctly.
+// Always tracks the referenced matrix as external memory.
+Local<Object> Matrix::CreateWrappedFromMat(cv::Mat mat){
+  Local < Object > result =
+      Nan::NewInstance(Nan::GetFunction(Nan::New(Matrix::constructor)).ToLocalChecked()).ToLocalChecked();
+  Matrix *m = Nan::ObjectWrap::Unwrap<Matrix>(result);
+  m->setMat(mat);
+
+  return result;
+}
+
+//Convenience factory method for creating a wrapped Matrix from a cv::Mat and tracking external memory correctly.
+// Only tracks the referenced matrix as external memory if the refcount does not exceed the base refcount.
+// Useful for creating a wrapper Matrix around a Mat that is also referenced by another wrapper Matrix
+Local<Object> Matrix::CreateWrappedFromMatIfNotReferenced(cv::Mat mat, int baseRefCount){
+  Local < Object > result =
+      Nan::NewInstance(Nan::GetFunction(Nan::New(Matrix::constructor)).ToLocalChecked()).ToLocalChecked();
+  Matrix *m = Nan::ObjectWrap::Unwrap<Matrix>(result);
+  m->mat = mat;
+  if (m->getWrappedRefCount() <= 2 + baseRefCount){ //one reference in m, one on the stack
+    Nan::AdjustExternalMemory(m->mat.dataend - m->mat.datastart);
+  }
+  return result;
+}
+
+Matrix::Matrix() :
+    node_opencv::Matrix() {
+  mat = cv::Mat();
+}
 
 Matrix::Matrix(int rows, int cols) : node_opencv::Matrix() {
   mat = cv::Mat(rows, cols, CV_32FC3);
+  Nan::AdjustExternalMemory(mat.dataend - mat.datastart);
 }
 
 Matrix::Matrix(int rows, int cols, int type) : node_opencv::Matrix() {
   // std::cout << "Matrix " << rows << std::endl;
   mat = cv::Mat(rows, cols, type);
+  Nan::AdjustExternalMemory(mat.dataend - mat.datastart);
+}
+
+Matrix::Matrix(Matrix *m) :
+    node_opencv::Matrix() {
+  mat = cv::Mat(m->mat);
 }
 
 Matrix::Matrix(cv::Mat m, cv::Rect roi) : node_opencv::Matrix() {
@@ -187,13 +237,14 @@ Matrix::Matrix(int rows, int cols, int type, char *data, int dataLength) {
 
 Matrix::Matrix(int rows, int cols, int type, Local<Object> scalarObj) {
   mat = cv::Mat(rows, cols, type);
+  Nan::AdjustExternalMemory(mat.dataend - mat.datastart);
   if (mat.channels() == 3) {
     mat.setTo(cv::Scalar(scalarObj->Get(0)->IntegerValue(),
-                         scalarObj->Get(1)->IntegerValue(),
-                         scalarObj->Get(2)->IntegerValue()));
+        scalarObj->Get(1)->IntegerValue(),
+        scalarObj->Get(2)->IntegerValue()));
   } else if (mat.channels() == 2) {
     mat.setTo(cv::Scalar(scalarObj->Get(0)->IntegerValue(),
-                         scalarObj->Get(1)->IntegerValue()));
+        scalarObj->Get(1)->IntegerValue()));
   } else if (mat.channels() == 1) {
     mat.setTo(cv::Scalar(scalarObj->Get(0)->IntegerValue()));
   } else {
@@ -201,13 +252,25 @@ Matrix::Matrix(int rows, int cols, int type, Local<Object> scalarObj) {
   }
 }
 
-Matrix::~Matrix() {
-  // std::cout << "~Matrix" << std::endl;
-  // if (mat.refcount != NULL) {
-  // std::cout << "releasing Matrix: " << *mat.refcount << std::endl;
-  // }
-  // mat.release();
-  // std::cout << " Matrix released: " << *mat.refcount << std::endl;
+Matrix::~Matrix(){
+  if(getWrappedRefCount() == 1){ //if this holds the last reference to the Mat
+    int size = mat.dataend - mat.datastart;
+    Nan::AdjustExternalMemory(-1 * size);
+  }
+}
+
+// Set the wrapped Mat with correct memory tracking
+// For this to work correctly, there should be no external references held to our previous
+// wrapped Mat, and no other Matrix objects should wrap a Mat pointing at the same
+// memory as our new Mat.
+void Matrix::setMat(cv::Mat m){
+  int oldSize = 0;
+  if(getWrappedRefCount() == 1){ //if this holds the last reference to the Mat
+    oldSize = mat.dataend - mat.datastart;
+  }
+  mat = m;
+  int newSize = mat.dataend - mat.datastart;
+  Nan::AdjustExternalMemory(newSize - oldSize);
 }
 
 NAN_METHOD(Matrix::Empty) {
@@ -222,19 +285,22 @@ double Matrix::DblGet(cv::Mat mat, int i, int j) {
   unsigned int pint = 0;
 
   switch (mat.type()) {
-  case CV_32FC3:
-    pix = mat.at<cv::Vec3b>(i, j);
-    pint |= (uchar)pix.val[2];
-    pint |= ((uchar)pix.val[1]) << 8;
-    pint |= ((uchar)pix.val[0]) << 16;
-    val = (double)pint;
-    break;
-  case CV_64FC1:
-    val = mat.at<double>(i, j);
-    break;
-  default:
+    case CV_32FC3:
+      pix = mat.at<cv::Vec3f>(i, j);
+      pint |= (uchar) pix.val[2];
+      pint |= ((uchar) pix.val[1]) << 8;
+      pint |= ((uchar) pix.val[0]) << 16;
+      val = (double) pint;
+      break;
+    case CV_64FC1:
+      val = mat.at<double>(i, j);
+      break;
+    case CV_32FC1:
+      val = mat.at<float>(i, j);
+      break;
+    default:
     val = mat.at<float>(i, j);
-    break;
+      break;
   }
   return val;
 }
@@ -248,17 +314,17 @@ NAN_METHOD(Matrix::Pixel) {
   // cv::Scalar scal = self->mat.at<uchar>(y, x);
 
   if (info.Length() == 3) {
-    Local<Object> objColor = info[2]->ToObject();
+    Local < Object > objColor = info[2]->ToObject();
 
     if (self->mat.channels() == 3) {
       self->mat.at<cv::Vec3b>(y, x)[0] =
-          (uchar)objColor->Get(0)->IntegerValue();
+          (uchar) objColor->Get(0)->IntegerValue();
       self->mat.at<cv::Vec3b>(y, x)[1] =
-          (uchar)objColor->Get(1)->IntegerValue();
+          (uchar) objColor->Get(1)->IntegerValue();
       self->mat.at<cv::Vec3b>(y, x)[2] =
-          (uchar)objColor->Get(2)->IntegerValue();
+          (uchar) objColor->Get(2)->IntegerValue();
     } else if (self->mat.channels() == 1)
-      self->mat.at<uchar>(y, x) = (uchar)objColor->Get(0)->IntegerValue();
+      self->mat.at<uchar>(y, x) = (uchar) objColor->Get(0)->IntegerValue();
 
     info.GetReturnValue().Set(info[2]->ToObject());
   } else {
@@ -291,6 +357,35 @@ NAN_METHOD(Matrix::Get) {
   info.GetReturnValue().Set(Nan::New<Number>(val));
 }
 
+NAN_METHOD(Matrix::GetPixel) {
+  SETUP_FUNCTION(Matrix)
+
+  int y = info[0]->IntegerValue();
+  int x = info[1]->IntegerValue();
+
+  if (self->mat.channels() == 4) {
+    v8::Local < v8::Array > arr = Nan::New<Array>(4);
+    cv::Vec4b pixel = self->mat.at<cv::Vec4b>(y, x);
+    arr->Set(0, Nan::New<Number>((double) pixel.val[0]));
+    arr->Set(1, Nan::New<Number>((double) pixel.val[1]));
+    arr->Set(2, Nan::New<Number>((double) pixel.val[2]));
+    arr->Set(3, Nan::New<Number>((double) pixel.val[3]));
+    info.GetReturnValue().Set(arr);
+  } else if (self->mat.channels() == 3) {
+    v8::Local < v8::Array > arr = Nan::New<Array>(3);
+    cv::Vec3b pixel = self->mat.at<cv::Vec3b>(y, x);
+    arr->Set(0, Nan::New<Number>((double) pixel.val[0]));
+    arr->Set(1, Nan::New<Number>((double) pixel.val[1]));
+    arr->Set(2, Nan::New<Number>((double) pixel.val[2]));
+    info.GetReturnValue().Set(arr);
+  } else if(self->mat.channels() == 1) {
+    int pixel = (int)self->mat.at<unsigned char>(y, x);
+    info.GetReturnValue().Set(pixel);
+  } else {
+    Nan::ThrowTypeError("Only 4, 3 and 1 channel matrix are supported");
+  }
+}
+
 NAN_METHOD(Matrix::Set) {
   SETUP_FUNCTION(Matrix)
 
@@ -303,16 +398,18 @@ NAN_METHOD(Matrix::Set) {
     self->mat.at<cv::Vec3b>(i, j)[info[3]->NumberValue()] = val;
   } else if (info.Length() == 3) {
     switch (self->mat.type()) {
-    case CV_32FC3:
-      vint = static_cast<unsigned int>(val + 0.5);
-      self->mat.at<cv::Vec3b>(i, j)[0] = (uchar)(vint >> 16) & 0xff;
-      self->mat.at<cv::Vec3b>(i, j)[1] = (uchar)(vint >> 8) & 0xff;
-      self->mat.at<cv::Vec3b>(i, j)[2] = (uchar)(vint)&0xff;
-      // printf("!!!i %x, %x, %x", (vint >> 16) & 0xff, (vint >> 8) & 0xff,
-      // (vint) & 0xff);
-      break;
-    default:
-      self->mat.at<double>(i, j) = val;
+      case CV_32FC3:
+        vint = static_cast<unsigned int>(val + 0.5);
+        self->mat.at<cv::Vec3f>(i, j)[0] = (uchar) (vint >> 16) & 0xff;
+        self->mat.at<cv::Vec3f>(i, j)[1] = (uchar) (vint >> 8) & 0xff;
+        self->mat.at<cv::Vec3f>(i, j)[2] = (uchar) (vint) & 0xff;
+        // printf("!!!i %x, %x, %x", (vint >> 16) & 0xff, (vint >> 8) & 0xff, (vint) & 0xff);
+        break;
+      case CV_32FC1:
+        self->mat.at<float>(i, j) = val;
+        break;
+      default:
+        self->mat.at<double>(i, j) = val;
     }
   } else {
     Nan::ThrowTypeError("Invalid number of arguments");
@@ -330,7 +427,7 @@ NAN_METHOD(Matrix::Put) {
   if (!Buffer::HasInstance(info[0])) {
     Nan::ThrowTypeError("Not a buffer");
   }
-  const char *buffer_data = Buffer::Data(info[0]);
+  const char* buffer_data = Buffer::Data(info[0]);
   size_t buffer_length = Buffer::Length(info[0]);
   memcpy(self->mat.data, buffer_data, buffer_length);
   return;
@@ -342,19 +439,23 @@ NAN_METHOD(Matrix::GetData) {
   Nan::HandleScope scope;
 
   Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
-  int size = self->mat.rows * self->mat.cols * self->mat.channels();
+  int size = self->mat.rows * self->mat.cols * self->mat.elemSize();
   Local<Object> buf = Nan::NewBuffer(size).ToLocalChecked();
-  uchar *data = (uchar *)Buffer::Data(buf);
-  memcpy(data, self->mat.data, size);
+  uchar* data = (uchar*) Buffer::Data(buf);
+  // if there is padding after each row, clone first to get rid of it
+  if (self->mat.dims == 2 && self->mat.step[0] != size_t(self->mat.size[1])) {
+    cv::Mat copy = self->mat.clone();
+    memcpy(data, copy.data, size);
+  } else {
+    memcpy(data, self->mat.data, size);
+  }
 
-  Local<Object> globalObj = Nan::GetCurrentContext()->Global();
-  Local<Function> bufferConstructor = Local<Function>::Cast(
-      globalObj->Get(Nan::New<String>("Buffer").ToLocalChecked()));
-  Local<Value> constructorArgs[3] = {
-      buf, Nan::New<Integer>((unsigned)size), Nan::New<Integer>(0)};
-  MaybeLocal<Object> actualBuffer = Nan::NewInstance(bufferConstructor, 3, constructorArgs);
+  v8::Local<v8::Object> globalObj = Nan::GetCurrentContext()->Global();
+  v8::Local<v8::Function> bufferConstructor = v8::Local<v8::Function>::Cast(globalObj->Get(Nan::New<String>("Buffer").ToLocalChecked()));
+  v8::Local<v8::Value> constructorArgs[3] = {buf, Nan::New<v8::Integer>((unsigned) size), Nan::New<v8::Integer>(0)};
+  v8::Local<v8::Object> actualBuffer = Nan::NewInstance(bufferConstructor, 3, constructorArgs).ToLocalChecked();
 
-  info.GetReturnValue().Set(actualBuffer.ToLocalChecked());
+  info.GetReturnValue().Set(actualBuffer);
 }
 
 NAN_METHOD(Matrix::Brightness) {
@@ -373,14 +474,14 @@ NAN_METHOD(Matrix::Brightness) {
       Nan::ThrowError("those channels are not supported");
     }
 
-    cv::Mat new_image = cv::Mat::zeros(image.size(), image.type());
+    cv::Mat new_image = cv::Mat::zeros( image.size(), image.type() );
     double alpha = info[0]->NumberValue();
     int beta = info[1]->IntegerValue();
 
     // Do the operation new_image(i,j) = alpha*image(i,j) + beta
-    for (int y = 0; y < image.rows; y++) {
-      for (int x = 0; x < image.cols; x++) {
-        for (int c = 0; c < 3; c++) {
+    for (int y = 0; y < image.rows; y++ ) {
+      for (int x = 0; x < image.cols; x++ ) {
+        for (int c = 0; c < 3; c++ ) {
           new_image.at<cv::Vec3b>(y, x)[c] = cv::saturate_cast<uchar>(
               alpha * (image.at<cv::Vec3b>(y, x)[c]) + beta);
         }
@@ -516,15 +617,18 @@ NAN_METHOD(Matrix::Size) {
   info.GetReturnValue().Set(arr);
 }
 
+NAN_METHOD(Matrix::Type) {
+  SETUP_FUNCTION(Matrix)
+
+  info.GetReturnValue().Set(Nan::New<Int32>(self->mat.type()));
+}
+
 NAN_METHOD(Matrix::Clone) {
   SETUP_FUNCTION(Matrix)
 
-  MaybeLocal<Object> im_h = Nan::NewInstance(Nan::New(Matrix::constructor)->GetFunction());
+  Local<Object> im_h = Matrix::CreateWrappedFromMat(self->mat.clone());
 
-  Matrix *m = Nan::ObjectWrap::Unwrap<Matrix>(im_h.ToLocalChecked());
-  m->mat = self->mat.clone();
-
-  info.GetReturnValue().Set(im_h.ToLocalChecked());
+  info.GetReturnValue().Set(im_h);
 }
 
 NAN_METHOD(Matrix::Crop) {
@@ -538,12 +642,9 @@ NAN_METHOD(Matrix::Crop) {
     int width = info[2]->IntegerValue();
     int height = info[3]->IntegerValue();
 
-    cv::Rect roi(x, y, width, height);
+    cv::Mat mat(self->mat, cv::Rect(x,y,width,height));
 
-    Local<Object> im_h =
-        Nan::New(Matrix::constructor)->GetFunction()->NewInstance();
-    Matrix *m = Nan::ObjectWrap::Unwrap<Matrix>(im_h);
-    m->mat = self->mat(roi);
+    Local < Object > im_h = Matrix::CreateWrappedFromMatIfNotReferenced(mat, 1);
 
     info.GetReturnValue().Set(im_h);
   } else {
@@ -572,14 +673,35 @@ NAN_METHOD(Matrix::PixelRow) {
 
   int width = self->mat.size().width;
   int y = info[0]->IntegerValue();
-  Local<Array> arr = Nan::New<Array>(width * 3);
+  v8::Local < v8::Array > arr;
 
-  for (int x = 0; x < width; x++) {
-    cv::Vec3b pixel = self->mat.at<cv::Vec3b>(y, x);
-    int offset = x * 3;
-    arr->Set(offset, Nan::New<Number>((double)pixel.val[0]));
-    arr->Set(offset + 1, Nan::New<Number>((double)pixel.val[1]));
-    arr->Set(offset + 2, Nan::New<Number>((double)pixel.val[2]));
+  if (self->mat.channels() == 4) {
+    arr = Nan::New<Array>(width * 4);
+    for (int x = 0; x < width; x++) {
+      cv::Vec4b pixel = self->mat.at<cv::Vec4b>(y, x);
+      int offset = x * 4;
+      arr->Set(offset, Nan::New<Number>((double) pixel.val[0]));
+      arr->Set(offset + 1, Nan::New<Number>((double) pixel.val[1]));
+      arr->Set(offset + 2, Nan::New<Number>((double) pixel.val[2]));
+      arr->Set(offset + 3, Nan::New<Number>((double) pixel.val[3]));
+    }
+  } else if(self->mat.channels() == 3){
+    arr = Nan::New<Array>(width * 3);
+    for (int x = 0; x < width; x++) {
+      cv::Vec3b pixel = self->mat.at<cv::Vec3b>(y, x);
+      int offset = x * 3;
+      arr->Set(offset, Nan::New<Number>((double) pixel.val[0]));
+      arr->Set(offset + 1, Nan::New<Number>((double) pixel.val[1]));
+      arr->Set(offset + 2, Nan::New<Number>((double) pixel.val[2]));
+    }
+  } else if(self->mat.channels() == 1){
+    arr = Nan::New<Array>(width);
+    for (int x = 0; x < width; x++) {
+      int pixel = (int)self->mat.at<unsigned char>(y, x);
+      arr->Set(x, Nan::New<Number>(pixel));
+    }
+  } else {
+      Nan::ThrowTypeError("Only 4, 3 and 1 channel matrix are supported");
   }
 
   info.GetReturnValue().Set(arr);
@@ -604,15 +726,37 @@ NAN_METHOD(Matrix::PixelCol) {
 
   int height = self->mat.size().height;
   int x = info[0]->IntegerValue();
-  Local<Array> arr = Nan::New<Array>(height * 3);
+  v8::Local < v8::Array > arr;
 
-  for (int y = 0; y < height; y++) {
-    cv::Vec3b pixel = self->mat.at<cv::Vec3b>(y, x);
-    int offset = y * 3;
-    arr->Set(offset, Nan::New<Number>((double)pixel.val[0]));
-    arr->Set(offset + 1, Nan::New<Number>((double)pixel.val[1]));
-    arr->Set(offset + 2, Nan::New<Number>((double)pixel.val[2]));
+  if (self->mat.channels() == 4) {
+    arr = Nan::New<Array>(height * 4);
+    for (int y = 0; y < height; y++) {
+      cv::Vec4b pixel = self->mat.at<cv::Vec4b>(y, x);
+      int offset = y * 4;
+      arr->Set(offset, Nan::New<Number>((double) pixel.val[0]));
+      arr->Set(offset + 1, Nan::New<Number>((double) pixel.val[1]));
+      arr->Set(offset + 2, Nan::New<Number>((double) pixel.val[2]));
+      arr->Set(offset + 3, Nan::New<Number>((double) pixel.val[3]));
+    }
+  } else if (self->mat.channels() == 3) {
+    arr = Nan::New<Array>(height * 3);
+    for (int y = 0; y < height; y++) {
+      cv::Vec3b pixel = self->mat.at<cv::Vec3b>(y, x);
+      int offset = y * 3;
+      arr->Set(offset, Nan::New<Number>((double) pixel.val[0]));
+      arr->Set(offset + 1, Nan::New<Number>((double) pixel.val[1]));
+      arr->Set(offset + 2, Nan::New<Number>((double) pixel.val[2]));
+    }
+  } else if(self->mat.channels() == 1) {
+    arr = Nan::New<Array>(height);
+    for (int y = 0; y < height; y++) {
+      int pixel = (int)self->mat.at<unsigned char>(y, x);
+      arr->Set(y, Nan::New<Number>(pixel));
+    }
+  } else {
+    Nan::ThrowTypeError("Only 4, 3 and 1 channel matrix are supported");
   }
+
   info.GetReturnValue().Set(arr);
 }
 
@@ -663,7 +807,7 @@ NAN_METHOD(Matrix::ToBuffer) {
       String::Utf8Value str(
           options->Get(Nan::New<String>("ext").ToLocalChecked())->ToString());
       optExt = *str;
-      ext = (const char *)optExt.c_str();
+      ext = (const char *) optExt.c_str();
     }
     if (options->Has(Nan::New<String>("jpegQuality").ToLocalChecked())) {
       int compression =
@@ -686,52 +830,60 @@ NAN_METHOD(Matrix::ToBuffer) {
 
   cv::imencode(ext, self->mat, vec, params);
 
-  Local<Object> buf = Nan::NewBuffer(vec.size()).ToLocalChecked();
-  uchar *data = (uchar *)Buffer::Data(buf);
+  Local < Object > buf = Nan::NewBuffer(vec.size()).ToLocalChecked();
+  uchar* data = (uchar*) Buffer::Data(buf);
   memcpy(data, &vec[0], vec.size());
 
-  Local<Object> globalObj = Nan::GetCurrentContext()->Global();
-  Local<Function> bufferConstructor = Local<Function>::Cast(
-      globalObj->Get(Nan::New<String>("Buffer").ToLocalChecked()));
-  Local<Value> constructorArgs[3] = {
-      buf, Nan::New<Integer>((unsigned)vec.size()),
-      Nan::New<Integer>(0)};
-  MaybeLocal<v8::Object> actualBuffer = Nan::NewInstance(bufferConstructor, 3, constructorArgs);
+  v8::Local < v8::Object > globalObj = Nan::GetCurrentContext()->Global();
+  v8::Local < v8::Function > bufferConstructor = v8::Local < v8::Function
+      > ::Cast(globalObj->Get(Nan::New<String>("Buffer").ToLocalChecked()));
+  v8::Local<v8::Value> constructorArgs[3] =
+      {buf, Nan::New<v8::Integer>((unsigned)vec.size()), Nan::New<v8::Integer>(0)};
+  v8::Local < v8::Object > actualBuffer = Nan::NewInstance(bufferConstructor, 3, constructorArgs).ToLocalChecked();
 
-  info.GetReturnValue().Set(actualBuffer.ToLocalChecked());
+  info.GetReturnValue().Set(actualBuffer);
 }
 
-class AsyncToBufferWorker : public Nan::AsyncWorker {
+class AsyncToBufferWorker: public Nan::AsyncWorker {
 public:
   AsyncToBufferWorker(Nan::Callback *callback, Matrix *matrix, std::string ext,
-                      std::vector<int> params)
-      : Nan::AsyncWorker(callback), matrix(matrix), ext(ext), params(params) {}
+    std::vector<int> params) :
+      Nan::AsyncWorker(callback),
+      matrix(new Matrix(matrix)), // dulipcate matrix, adding ref, but not copying data
+      ext(ext),
+      params(params) {
+  }
 
-  ~AsyncToBufferWorker() {}
+  ~AsyncToBufferWorker() {
+      // mat is released, decrementing refcount
+  }
 
   void Execute() {
     std::vector<uchar> vec(0);
     // std::vector<int> params(0);//CV_IMWRITE_JPEG_QUALITY 90
-    cv::imencode(ext, this->matrix->mat, vec, this->params);
+    cv::imencode(ext, matrix->mat, vec, this->params);
     res = vec;
   }
 
   void HandleOKCallback() {
     Nan::HandleScope scope;
 
+    delete matrix;
+    matrix = NULL;
+
     Local<Object> buf = Nan::NewBuffer(res.size()).ToLocalChecked();
-    uchar *data = (uchar *)Buffer::Data(buf);
+    uchar* data = (uchar*) Buffer::Data(buf);
     memcpy(data, &res[0], res.size());
 
-    Local<Object> globalObj = Nan::GetCurrentContext()->Global();
-    Local<Function> bufferConstructor = Local<Function>::Cast(
-        globalObj->Get(Nan::New<String>("Buffer").ToLocalChecked()));
-    Local<Value> constructorArgs[3] = {
-        buf, Nan::New<Integer>((unsigned)res.size()),
-        Nan::New<Integer>(0)};
-    MaybeLocal<v8::Object> actualBuffer = Nan::NewInstance(bufferConstructor, 3, constructorArgs);
+    v8::Local<v8::Object> globalObj = Nan::GetCurrentContext()->Global();
+    v8::Local<v8::Function> bufferConstructor = v8::Local<v8::Function>::Cast(globalObj->Get(Nan::New<String>("Buffer").ToLocalChecked()));
+    v8::Local<v8::Value> constructorArgs[3] = {buf, Nan::New<v8::Integer>((unsigned)res.size()), Nan::New<v8::Integer>(0)};
+    v8::Local<v8::Object> actualBuffer = Nan::NewInstance(bufferConstructor, 3, constructorArgs).ToLocalChecked();;
 
-    Local<Value> argv[] = {Nan::Null(), actualBuffer.ToLocalChecked()};
+    Local<Value> argv[] = {
+      Nan::Null(),
+      actualBuffer
+    };
 
     Nan::TryCatch try_catch;
     callback->Call(2, argv);
@@ -806,7 +958,7 @@ NAN_METHOD(Matrix::Ellipse) {
   if (info[0]->IsObject()) {
     Handle<Object> options = Local<Object>::Cast(info[0]);
     if (options->Has(Nan::New<String>("center").ToLocalChecked())) {
-      Local<Object> center =
+      Local < Object > center =
           options->Get(Nan::New<String>("center").ToLocalChecked())->ToObject();
       x = center->Get(Nan::New<String>("x").ToLocalChecked())->Uint32Value();
       y = center->Get(Nan::New<String>("y").ToLocalChecked())->Uint32Value();
@@ -844,7 +996,7 @@ NAN_METHOD(Matrix::Ellipse) {
                   ->Uint32Value();
     }
     if (options->Has(Nan::New<String>("color").ToLocalChecked())) {
-      Local<Object> objColor =
+      Local < Object > objColor =
           options->Get(Nan::New<String>("color").ToLocalChecked())->ToObject();
       color = setColor(objColor);
     }
@@ -855,7 +1007,7 @@ NAN_METHOD(Matrix::Ellipse) {
     height = info[3]->Uint32Value();
 
     if (info[4]->IsArray()) {
-      Local<Object> objColor = info[4]->ToObject();
+      Local < Object > objColor = info[4]->ToObject();
       color = setColor(objColor);
     }
 
@@ -864,7 +1016,7 @@ NAN_METHOD(Matrix::Ellipse) {
   }
 
   cv::ellipse(self->mat, cv::Point(x, y), cv::Size(width, height), angle,
-              startAngle, endAngle, color, thickness, lineType, shift);
+      startAngle, endAngle, color, thickness, lineType, shift);
   info.GetReturnValue().Set(Nan::Null());
 }
 
@@ -872,13 +1024,13 @@ NAN_METHOD(Matrix::Rectangle) {
   SETUP_FUNCTION(Matrix)
 
   if (info[0]->IsArray() && info[1]->IsArray()) {
-    Local<Object> xy = info[0]->ToObject();
-    Local<Object> width_height = info[1]->ToObject();
+    Local < Object > xy = info[0]->ToObject();
+    Local < Object > width_height = info[1]->ToObject();
 
     cv::Scalar color(0, 0, 255);
 
     if (info[2]->IsArray()) {
-      Local<Object> objColor = info[2]->ToObject();
+      Local < Object > objColor = info[2]->ToObject();
       color = setColor(objColor);
     }
 
@@ -894,7 +1046,7 @@ NAN_METHOD(Matrix::Rectangle) {
       thickness = info[3]->IntegerValue();
 
     cv::rectangle(self->mat, cv::Point(x, y), cv::Point(x + width, y + height),
-                  color, thickness);
+        color, thickness);
   }
 
   info.GetReturnValue().Set(Nan::Null());
@@ -904,13 +1056,13 @@ NAN_METHOD(Matrix::Line) {
   SETUP_FUNCTION(Matrix)
 
   if (info[0]->IsArray() && info[1]->IsArray()) {
-    Local<Object> xy1 = info[0]->ToObject();
-    Local<Object> xy2 = info[1]->ToObject();
+    Local < Object > xy1 = info[0]->ToObject();
+    Local < Object > xy2 = info[1]->ToObject();
 
     cv::Scalar color(0, 0, 255);
 
     if (info[2]->IsArray()) {
-      Local<Object> objColor = info[2]->ToObject();
+      Local < Object > objColor = info[2]->ToObject();
       color = setColor(objColor);
     }
 
@@ -935,9 +1087,9 @@ NAN_METHOD(Matrix::FillPoly) {
   SETUP_FUNCTION(Matrix)
 
   if (info[0]->IsArray()) {
-    Local<Array> polyArray = Local<Array>::Cast(info[0]->ToObject());
+    Local < Array > polyArray = Local < Array > ::Cast(info[0]->ToObject());
 
-    cv::Point **polygons = new cv::Point *[polyArray->Length()];
+    cv::Point **polygons = new cv::Point*[polyArray->Length()];
     int *polySizes = new int[polyArray->Length()];
     for (unsigned int i = 0; i < polyArray->Length(); i++) {
       Local<Array> singlePoly =
@@ -946,7 +1098,7 @@ NAN_METHOD(Matrix::FillPoly) {
       polySizes[i] = singlePoly->Length();
 
       for (unsigned int j = 0; j < singlePoly->Length(); j++) {
-        Local<Array> point = Local<Array>::Cast(singlePoly->Get(j)->ToObject());
+        Local<Array> point = Local<Array> ::Cast(singlePoly->Get(j)->ToObject());
         polygons[i][j].x = point->Get(0)->IntegerValue();
         polygons[i][j].y = point->Get(1)->IntegerValue();
       }
@@ -958,8 +1110,8 @@ NAN_METHOD(Matrix::FillPoly) {
       color = setColor(objColor);
     }
 
-    cv::fillPoly(self->mat, (const cv::Point **)polygons, polySizes,
-                 polyArray->Length(), color);
+    cv::fillPoly(self->mat, (const cv::Point **) polygons, polySizes,
+        polyArray->Length(), color);
   }
 
   info.GetReturnValue().Set(Nan::Null());
@@ -984,10 +1136,13 @@ NAN_METHOD(Matrix::Save) {
 
 // All this is for async save, see here for nan example:
 // https://github.com/rvagg/nan/blob/c579ae858ae3208d7e702e8400042ba9d48fa64b/examples/async_pi_estimate/async.cc
-class AsyncSaveWorker : public Nan::AsyncWorker {
+class AsyncSaveWorker: public Nan::AsyncWorker {
 public:
-  AsyncSaveWorker(Nan::Callback *callback, Matrix *matrix, char *filename)
-      : Nan::AsyncWorker(callback), matrix(matrix), filename(filename) {}
+  AsyncSaveWorker(Nan::Callback *callback, Matrix *matrix, char* filename) :
+      Nan::AsyncWorker(callback),
+      matrix(new Matrix(matrix)),
+      filename(filename) {
+  }
 
   ~AsyncSaveWorker() {}
 
@@ -995,7 +1150,9 @@ public:
   // It is not safe to access V8, or V8 data structures
   // here, so everything we need for input and output
   // should go on `this`.
-  void Execute() { res = cv::imwrite(this->filename, this->matrix->mat); }
+  void Execute() {
+    res = cv::imwrite(this->filename, matrix->mat);
+  }
 
   // Executed when the async work is complete
   // this function will be run inside the main event loop
@@ -1003,7 +1160,13 @@ public:
   void HandleOKCallback() {
     Nan::HandleScope scope;
 
-    Local<Value> argv[] = {Nan::Null(), Nan::New<Number>(res)};
+    delete matrix;
+    matrix = NULL;
+
+    Local<Value> argv[] = {
+      Nan::Null(),
+      Nan::New<Number>(res)
+    };
 
     Nan::TryCatch try_catch;
     callback->Call(2, argv);
@@ -1042,12 +1205,8 @@ NAN_METHOD(Matrix::Zeros) {
   int h = info[1]->Uint32Value();
   int type = (info.Length() > 2) ? info[2]->IntegerValue() : CV_64FC1;
 
-  Local<Object> im_h =
-      Nan::New(Matrix::constructor)->GetFunction()->NewInstance();
-  Matrix *img = Nan::ObjectWrap::Unwrap<Matrix>(im_h);
   cv::Mat mat = cv::Mat::zeros(w, h, type);
-
-  img->mat = mat;
+  Local<Object> im_h = Matrix::CreateWrappedFromMat(mat);
   info.GetReturnValue().Set(im_h);
 }
 
@@ -1058,12 +1217,9 @@ NAN_METHOD(Matrix::Ones) {
   int h = info[1]->Uint32Value();
   int type = (info.Length() > 2) ? info[2]->IntegerValue() : CV_64FC1;
 
-  Local<Object> im_h =
-      Nan::New(Matrix::constructor)->GetFunction()->NewInstance();
-  Matrix *img = Nan::ObjectWrap::Unwrap<Matrix>(im_h);
   cv::Mat mat = cv::Mat::ones(w, h, type);
+  Local<Object> im_h = Matrix::CreateWrappedFromMat(mat);
 
-  img->mat = mat;
   info.GetReturnValue().Set(im_h);
 }
 
@@ -1074,12 +1230,9 @@ NAN_METHOD(Matrix::Eye) {
   int h = info[1]->Uint32Value();
   int type = (info.Length() > 2) ? info[2]->IntegerValue() : CV_64FC1;
 
-  Local<Object> im_h =
-      Nan::New(Matrix::constructor)->GetFunction()->NewInstance();
-  Matrix *img = Nan::ObjectWrap::Unwrap<Matrix>(im_h);
   cv::Mat mat = cv::Mat::eye(w, h, type);
+  Local<Object> im_h = Matrix::CreateWrappedFromMat(mat);
 
-  img->mat = mat;
   info.GetReturnValue().Set(im_h);
 }
 
@@ -1091,7 +1244,10 @@ NAN_METHOD(Matrix::ConvertGrayscale) {
     Nan::ThrowError("Image is no 3-channel");
   }
 
+  int oldSize = self->mat.dataend - self->mat.datastart;
   cv::cvtColor(self->mat, self->mat, CV_BGR2GRAY);
+  int newSize = self->mat.dataend - self->mat.datastart;
+  Nan::AdjustExternalMemory(newSize - oldSize);
 
   info.GetReturnValue().Set(Nan::Null());
 }
@@ -1118,6 +1274,9 @@ NAN_METHOD(Matrix::GaussianBlur) {
   cv::Mat blurred;
 
   Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
+  double sigmaX = 0;
+  double sigmaY = 0;
+  int borderType = cv::BORDER_DEFAULT;
 
   if (info.Length() < 1) {
     ksize = cv::Size(5, 5);
@@ -1133,9 +1292,16 @@ NAN_METHOD(Matrix::GaussianBlur) {
       Nan::ThrowTypeError("'ksize' argument must be a 2 double array");
     }
     ksize = cv::Size(x->NumberValue(), y->NumberValue());
+
+    sigmaX = info.Length() < 2 ? 0 : info[1]->NumberValue();
+    sigmaY = info.Length() < 3 ? 0 : info[2]->NumberValue();
+
+    if (info.Length() == 4) {
+      borderType = info[3]->IntegerValue();
+    }
   }
 
-  cv::GaussianBlur(self->mat, blurred, ksize, 0);
+  cv::GaussianBlur(self->mat, blurred, ksize, sigmaX, sigmaY, borderType);
   blurred.copyTo(self->mat);
 
   info.GetReturnValue().Set(Nan::Null());
@@ -1219,14 +1385,10 @@ NAN_METHOD(Matrix::Sobel) {
 
   Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
 
-  Local<Object> result_to_return =
-      Nan::New(Matrix::constructor)->GetFunction()->NewInstance();
-  Matrix *result = Nan::ObjectWrap::Unwrap<Matrix>(result_to_return);
+  cv::Mat result;
+  cv::Sobel(self->mat, result, ddepth, xorder, yorder, ksize, scale, delta, borderType);
 
-  cv::Sobel(self->mat, result->mat, ddepth, xorder, yorder, ksize, scale, delta,
-            borderType);
-
-  info.GetReturnValue().Set(result_to_return);
+  info.GetReturnValue().Set(CreateWrappedFromMat(result));
 }
 
 NAN_METHOD(Matrix::Copy) {
@@ -1234,12 +1396,10 @@ NAN_METHOD(Matrix::Copy) {
 
   Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
 
-  Local<Object> img_to_return =
-      Nan::New(Matrix::constructor)->GetFunction()->NewInstance();
-  Matrix *img = Nan::ObjectWrap::Unwrap<Matrix>(img_to_return);
-  self->mat.copyTo(img->mat);
+  cv::Mat result;
+  self->mat.copyTo(result);
 
-  info.GetReturnValue().Set(img_to_return);
+  info.GetReturnValue().Set(CreateWrappedFromMat(result));
 }
 
 NAN_METHOD(Matrix::Flip) {
@@ -1247,20 +1407,18 @@ NAN_METHOD(Matrix::Flip) {
 
   Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
 
-  if (info.Length() < 1 || !info[0]->IsInt32()) {
+  if ( info.Length() < 1 || !info[0]->IsInt32() ) {
     Nan::ThrowTypeError(
         "Flip requires an integer flipCode argument "
         "(0 = X axis, positive = Y axis, negative = both axis)");
   }
 
-  int flipCode = info[0]->Int32Value();
+  int flipCode = Nan::To<int>(info[0]).FromJust();
 
-  Local<Object> img_to_return =
-      Nan::New(Matrix::constructor)->GetFunction()->NewInstance();
-  Matrix *img = Nan::ObjectWrap::Unwrap<Matrix>(img_to_return);
-  cv::flip(self->mat, img->mat, flipCode);
+  cv::Mat result;
+  cv::flip(self->mat, result, flipCode);
 
-  info.GetReturnValue().Set(img_to_return);
+  info.GetReturnValue().Set(CreateWrappedFromMat(result));
 }
 
 NAN_METHOD(Matrix::ROI) {
@@ -1268,23 +1426,20 @@ NAN_METHOD(Matrix::ROI) {
 
   Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
 
-  if (info.Length() != 4) {
+  if ( info.Length() != 4 ) {
     Nan::ThrowTypeError("ROI requires x,y,w,h arguments");
   }
 
-  // Although it's an image to return, it is in fact a pointer to ROI of parent
-  // matrix
-  Local<Object> img_to_return =
-      Nan::New(Matrix::constructor)->GetFunction()->NewInstance();
-  Matrix *img = Nan::ObjectWrap::Unwrap<Matrix>(img_to_return);
+  // Although it's an image to return, it is in fact a pointer to ROI of parent matrix
 
   int x = info[0]->IntegerValue();
   int y = info[1]->IntegerValue();
   int w = info[2]->IntegerValue();
   int h = info[3]->IntegerValue();
 
-  cv::Mat roi(self->mat, cv::Rect(x, y, w, h));
-  img->mat = roi;
+  cv::Mat roi(self->mat, cv::Rect(x,y,w,h));
+  // Although it's an image to return, it is in fact a pointer to ROI of parent matrix
+  Local<Object> img_to_return = Matrix::CreateWrappedFromMatIfNotReferenced(roi, 1);
 
   info.GetReturnValue().Set(img_to_return);
 }
@@ -1294,14 +1449,14 @@ NAN_METHOD(Matrix::Ptr) {
   Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
   int line = info[0]->Uint32Value();
 
-  char *data = self->mat.ptr<char>(line);
+  char* data = self->mat.ptr<char>(line);
   // uchar* data = self->mat.data;
 
   // char *mydata = "Random raw data\0";
   Local<Object> return_buffer =
       Nan::NewBuffer((char *)data, self->mat.step).ToLocalChecked();
-  info.GetReturnValue().Set(return_buffer);
-  //  return;
+  info.GetReturnValue().Set( return_buffer );
+//  return;
 }
 
 NAN_METHOD(Matrix::AbsDiff) {
@@ -1391,6 +1546,34 @@ NAN_METHOD(Matrix::Max) {
   info.GetReturnValue().Set(Nan::Null());
 }
 
+NAN_METHOD(Matrix::Dct) {
+  Nan::HandleScope scope;
+
+  Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
+  int cols = self->mat.cols;
+  int rows = self->mat.rows;
+
+  cv::Mat result(cols, rows, CV_32F);
+
+  cv::dct(self->mat, result);
+
+  info.GetReturnValue().Set(CreateWrappedFromMat(result));
+}
+
+NAN_METHOD(Matrix::Idct) {
+  Nan::HandleScope scope;
+
+  Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
+  int cols = self->mat.cols;
+  int rows = self->mat.rows;
+
+  cv::Mat result(cols, rows, CV_32F);
+
+  cv::idct(self->mat, result);
+
+  info.GetReturnValue().Set(CreateWrappedFromMat(result));
+}
+
 NAN_METHOD(Matrix::AddWeighted) {
   Nan::HandleScope scope;
 
@@ -1404,13 +1587,33 @@ NAN_METHOD(Matrix::AddWeighted) {
 
   try {
     cv::addWeighted(src1->mat, alpha, src2->mat, beta, gamma, self->mat);
-  } catch (cv::Exception &e) {
-    const char *err_msg = e.what();
+  } catch(cv::Exception& e ) {
+    const char* err_msg = e.what();
     Nan::ThrowError(err_msg);
   }
 
   info.GetReturnValue().Set(Nan::Null());
 }
+
+// NAN_METHOD(Matrix::Add) {
+//   Nan::HandleScope scope;
+
+//   Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
+//   int cols = self->mat.cols;
+//   int rows = self->mat.rows;
+
+//   Matrix *src1 = Nan::ObjectWrap::Unwrap<Matrix>(info[0]->ToObject());
+
+//   try {
+//     cv::Mat outputmat = cv::Mat(cols, rows, self->mat.type());
+//     cv::add(self->mat, src1->mat, outputmat);
+//     Local<Object> out = CreateWrappedFromMat(outputmat);
+//     info.GetReturnValue().Set(out);
+//   } catch(cv::Exception& e ) {
+//     const char* err_msg = e.what();
+//     Nan::ThrowError(err_msg);
+//   }
+// }
 
 NAN_METHOD(Matrix::BitwiseXor) {
   Nan::HandleScope scope;
@@ -1483,7 +1686,7 @@ NAN_METHOD(Matrix::Moments) {
 
   Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
 
-  cv::Moments mo = moments(self->mat, false);
+  cv::Moments mo = moments( self->mat, false );
 
   Local<Object> res = Nan::New<Object>();
 
@@ -1579,8 +1782,7 @@ NAN_METHOD(Matrix::FindContours) {
   }
 
   Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
-  Local<Object> conts_to_return =
-      Nan::New(Contour::constructor)->GetFunction()->NewInstance();
+  Local<Object> conts_to_return = Nan::NewInstance(Nan::GetFunction(Nan::New(Contour::constructor)).ToLocalChecked()).ToLocalChecked();
   Contour *contours = Nan::ObjectWrap::Unwrap<Contour>(conts_to_return);
 
   cv::findContours(self->mat, contours->contours, contours->hierarchy, mode,
@@ -1603,7 +1805,19 @@ NAN_METHOD(Matrix::DrawContour) {
   }
 
   int thickness = info.Length() < 4 ? 1 : info[3]->NumberValue();
-  cv::drawContours(self->mat, cont->contours, pos, color, thickness);
+  int lineType = info.Length() < 5 ? 8 : info[4]->NumberValue();
+  int maxLevel = info.Length() < 6 ? 0 : info[5]->NumberValue();
+
+  cv::Point offset;
+  if (info.Length() == 6) {
+    Local<Array> _offset = Local<Array>::Cast(info[5]);
+    offset = cv::Point(
+            Nan::To<int>(Nan::Get(_offset, 0).ToLocalChecked()).FromJust(),
+            Nan::To<int>(Nan::Get(_offset, 1).ToLocalChecked()).FromJust()
+    );
+  }
+
+  cv::drawContours(self->mat, cont->contours, pos, color, thickness, lineType, cont->hierarchy, maxLevel, offset);
 
   return;
 }
@@ -1630,31 +1844,121 @@ NAN_METHOD(Matrix::GoodFeaturesToTrack) {
   Nan::HandleScope scope;
 
   Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
+  int maxCorners = info.Length() >= 1 ? info[0]->IntegerValue() : 500;
+  double qualityLevel = info.Length() >= 2 ? (double) info[1]->NumberValue() : 0.01;
+  double minDistance = info.Length() >= 3 ? (double) info[2]->NumberValue() : 10;
+  int blockSize = info.Length() >= 4 ? info[3]->IntegerValue() : 3;
+  bool useHarrisDetector = info.Length() >= 5 ? info[4]->BooleanValue() : false;
+  double k = info.Length() >= 6 ? (double) info[5]->NumberValue() : 0.04;
+
   std::vector<cv::Point2f> corners;
   cv::Mat gray;
 
-  cvtColor(self->mat, gray, CV_BGR2GRAY);
-  equalizeHist(gray, gray);
+   if (self->mat.channels() == 1) {
+     gray = self->mat;
+   } else {
+     cvtColor(self->mat, gray, CV_BGR2GRAY);
+     equalizeHist(gray, gray);
+   }
 
-  cv::goodFeaturesToTrack(gray, corners, 500, 0.01, 10);
-  Local<Array> arr = Nan::New<Array>(corners.size());
+  cv::goodFeaturesToTrack(gray, corners, maxCorners, qualityLevel, minDistance, cv::noArray(), blockSize, useHarrisDetector, k);
+  v8::Local<v8::Array> arr = Nan::New<Array>(corners.size());
 
-  for (unsigned int i = 0; i < corners.size(); i++) {
+  for (unsigned int i=0; i<corners.size(); i++) {
     Local<Array> pt = Nan::New<Array>(2);
-    pt->Set(0, Nan::New<Number>((double)corners[i].x));
-    pt->Set(1, Nan::New<Number>((double)corners[i].y));
+    pt->Set(0, Nan::New<Number>((double) corners[i].x));
+    pt->Set(1, Nan::New<Number>((double) corners[i].y));
     arr->Set(i, pt);
   }
 
   info.GetReturnValue().Set(arr);
 }
 
+#ifdef HAVE_OPENCV_VIDEO
+NAN_METHOD(Matrix::CalcOpticalFlowPyrLK) {
+  Nan::HandleScope scope;
+
+  Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
+  Matrix *newMatrix = Nan::ObjectWrap::Unwrap<Matrix>(info[0]->ToObject());
+  Local<Array> points = Local<Array>::Cast(info[1]->ToObject());
+  std::vector<cv::Point2f> old_points;
+
+  for (unsigned int i=0; i<points->Length(); i++) {
+    Local<Object> pt = points->Get(i)->ToObject();
+    old_points.push_back(cv::Point2f(pt->Get(0)->NumberValue(), pt->Get(1)->NumberValue()));
+  }
+
+  cv::Size winSize;
+  if (info.Length() >= 3 && info[2]->IsArray()) {
+    Local<Object> winSizeObj = info[2]->ToObject();
+    winSize = cv::Size(winSizeObj->Get(0)->IntegerValue(), winSizeObj->Get(1)->IntegerValue());
+  } else {
+    winSize = cv::Size(21, 21);
+  }
+
+  int maxLevel = info.Length() >= 4 ? info[3]->IntegerValue() : 3;
+
+  cv::TermCriteria criteria;
+  if (info.Length() >= 5 && info[4]->IsArray()) {
+    Local<Object> criteriaObj = info[4]->ToObject();
+    criteria = cv::TermCriteria(criteriaObj->Get(0)->IntegerValue(), criteriaObj->Get(1)->IntegerValue(), (double) criteriaObj->Get(2)->NumberValue());
+  } else {
+    criteria = cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 30, 0.01);
+  }
+
+  int flags = info.Length() >= 6 ? info[5]->IntegerValue() : 0;
+  double minEigThreshold = info.Length() >= 7 ? info[6]->NumberValue() : 1e-4;
+
+  cv::Mat old_gray;
+  cv::cvtColor(self->mat, old_gray, CV_BGR2GRAY);
+
+  cv::Mat new_gray;
+  cv::cvtColor(newMatrix->mat, new_gray, CV_BGR2GRAY);
+
+  std::vector<cv::Point2f> new_points;
+  std::vector<uchar> status;
+  std::vector<float> err;
+
+  cv::calcOpticalFlowPyrLK(old_gray, new_gray, old_points, new_points, status, err, winSize, maxLevel, criteria, flags, minEigThreshold);
+
+  v8::Local<v8::Array> old_arr = Nan::New<Array>(old_points.size());
+  v8::Local<v8::Array> new_arr = Nan::New<Array>(new_points.size());
+  v8::Local<v8::Array> found = Nan::New<Array>(status.size());
+
+  for (unsigned int i=0; i<old_points.size(); i++) {
+    v8::Local<v8::Array> pt = Nan::New<Array>(2);
+    pt->Set(0, Nan::New<Number>((double) old_points[i].x));
+    pt->Set(1, Nan::New<Number>((double) old_points[i].y));
+    old_arr->Set(i, pt);
+  }
+
+  for (unsigned int i=0; i<new_points.size(); i++) {
+    v8::Local<v8::Array> pt = Nan::New<Array>(2);
+    pt->Set(0, Nan::New<Number>((double) new_points[i].x));
+    pt->Set(1, Nan::New<Number>((double) new_points[i].y));
+    new_arr->Set(i, pt);
+  }
+
+  for (unsigned int i=0; i<status.size(); i++) {
+    v8::Local<v8::Integer> pt = Nan::New<Integer>((int)status[i]);
+    found->Set(i, pt);
+  }
+
+  Local<Object> data = Nan::New<Object>();
+  data->Set(Nan::New<String>("old_points").ToLocalChecked(), old_arr);
+  data->Set(Nan::New<String>("new_points").ToLocalChecked(), new_arr);
+  data->Set(Nan::New<String>("found").ToLocalChecked(), found);
+
+  info.GetReturnValue().Set(data);
+}
+#endif
+
 NAN_METHOD(Matrix::HoughLinesP) {
   Nan::HandleScope scope;
 
   Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
   double rho = info.Length() < 1 ? 1 : info[0]->NumberValue();
-  double theta = info.Length() < 2 ? CV_PI / 180 : info[1]->NumberValue();
+  double theta = info.Length() < 2 ? CV_PI/180 : info[1]->NumberValue();
   int threshold = info.Length() < 3 ? 80 : info[2]->Uint32Value();
   double minLineLength = info.Length() < 4 ? 30 : info[3]->NumberValue();
   double maxLineGap = info.Length() < 5 ? 10 : info[4]->NumberValue();
@@ -1669,12 +1973,12 @@ NAN_METHOD(Matrix::HoughLinesP) {
 
   Local<Array> arr = Nan::New<Array>(lines.size());
 
-  for (unsigned int i = 0; i < lines.size(); i++) {
+  for (unsigned int i=0; i<lines.size(); i++) {
     Local<Array> pt = Nan::New<Array>(4);
-    pt->Set(0, Nan::New<Number>((double)lines[i][0]));
-    pt->Set(1, Nan::New<Number>((double)lines[i][1]));
-    pt->Set(2, Nan::New<Number>((double)lines[i][2]));
-    pt->Set(3, Nan::New<Number>((double)lines[i][3]));
+    pt->Set(0, Nan::New<Number>((double) lines[i][0]));
+    pt->Set(1, Nan::New<Number>((double) lines[i][1]));
+    pt->Set(2, Nan::New<Number>((double) lines[i][2]));
+    pt->Set(3, Nan::New<Number>((double) lines[i][3]));
     arr->Set(i, pt);
   }
 
@@ -1700,15 +2004,15 @@ NAN_METHOD(Matrix::HoughCircles) {
   equalizeHist(self->mat, gray);
 
   cv::HoughCircles(gray, circles, CV_HOUGH_GRADIENT, dp, minDist,
-                   higherThreshold, accumulatorThreshold, minRadius, maxRadius);
+      higherThreshold, accumulatorThreshold, minRadius, maxRadius);
 
   Local<Array> arr = Nan::New<Array>(circles.size());
 
-  for (unsigned int i = 0; i < circles.size(); i++) {
+  for (unsigned int i=0; i < circles.size(); i++) {
     Local<Array> pt = Nan::New<Array>(3);
-    pt->Set(0, Nan::New<Number>((double)circles[i][0])); // center x
-    pt->Set(1, Nan::New<Number>((double)circles[i][1])); // center y
-    pt->Set(2, Nan::New<Number>((double)circles[i][2])); // radius
+    pt->Set(0, Nan::New<Number>((double) circles[i][0]));  // center x
+    pt->Set(1, Nan::New<Number>((double) circles[i][1]));// center y
+    pt->Set(2, Nan::New<Number>((double) circles[i][2]));// radius
     arr->Set(i, pt);
   }
 
@@ -1716,29 +2020,43 @@ NAN_METHOD(Matrix::HoughCircles) {
 }
 
 cv::Scalar setColor(Local<Object> objColor) {
-  Local<Value> valB = objColor->Get(0);
-  Local<Value> valG = objColor->Get(1);
-  Local<Value> valR = objColor->Get(2);
+  int64_t channels[4] = { 0, 0, 0, 0 };
 
-  cv::Scalar color = cv::Scalar(valB->IntegerValue(), valG->IntegerValue(),
-                                valR->IntegerValue());
-  return color;
+  // We'll accomodate a channel count up to 4 and fall back to the old
+  // "assume it's always 3" in the default case
+  if (!objColor->HasRealIndexedProperty(1)) {
+    channels[0] = objColor->Get(0)->IntegerValue();
+  } else if (!objColor->HasRealIndexedProperty(2)) {
+    channels[0] = objColor->Get(0)->IntegerValue();
+    channels[1] = objColor->Get(1)->IntegerValue();
+  } else if (!objColor->HasRealIndexedProperty(4)) {
+    channels[0] = objColor->Get(0)->IntegerValue();
+    channels[1] = objColor->Get(1)->IntegerValue();
+    channels[2] = objColor->Get(2)->IntegerValue();
+    channels[3] = objColor->Get(3)->IntegerValue();
+  } else {
+    channels[0] = objColor->Get(0)->IntegerValue();
+    channels[1] = objColor->Get(1)->IntegerValue();
+    channels[2] = objColor->Get(2)->IntegerValue();
+  }
+
+  return cv::Scalar(channels[0], channels[1], channels[2], channels[3]);
 }
 
 cv::Point setPoint(Local<Object> objPoint) {
   return cv::Point(objPoint->Get(0)->IntegerValue(),
-                   objPoint->Get(1)->IntegerValue());
+      objPoint->Get(1)->IntegerValue());
 }
 
-cv::Rect *setRect(Local<Object> objRect, cv::Rect &result) {
+cv::Rect* setRect(Local<Object> objRect, cv::Rect &result) {
   if (!objRect->IsArray() || !objRect->Get(0)->IsArray() ||
       !objRect->Get(0)->IsArray()) {
     printf("error");
     return 0;
   };
 
-  Local<Object> point = objRect->Get(0)->ToObject();
-  Local<Object> size = objRect->Get(1)->ToObject();
+  Local < Object > point = objRect->Get(0)->ToObject();
+  Local < Object > size = objRect->Get(1)->ToObject();
 
   result.x = point->Get(0)->IntegerValue();
   result.y = point->Get(1)->IntegerValue();
@@ -1748,28 +2066,161 @@ cv::Rect *setRect(Local<Object> objRect, cv::Rect &result) {
   return &result;
 }
 
+
+class ResizeASyncWorker: public Nan::AsyncWorker {
+public:
+  ResizeASyncWorker(Nan::Callback *callback, Matrix *image, cv::Size size, double fx, double fy, int interpolation) :
+      Nan::AsyncWorker(callback),
+      image(new Matrix(image)),
+      dest(cv::Mat()),
+      size(size),
+      fx(fx),
+      fy(fy),
+      interpolation(interpolation),
+      success(0) {
+  }
+    
+  ~ResizeASyncWorker() {
+    // Any cleanup we needed to do could be done here.
+    // Clean up of the input image Matrix and the destination cv::Mat
+    // should be handled automatically by destructors.
+  }
+
+  void Execute() {
+    try {
+        cv::resize(image->mat, dest, size, fx, fy, interpolation);
+        success = 1;
+    } catch(...){
+        success = 0;
+    }
+  }
+
+  void HandleOKCallback() {
+    Nan::HandleScope scope;
+
+    delete image;
+    image = NULL;
+    
+    if (success){
+        try{
+            Local<Object> im_to_return = Matrix::CreateWrappedFromMat(dest);
+            dest.release(); //release our refcount before handing it back to the callback
+
+            Local<Value> argv[] = {
+              Nan::Null(), // err
+              im_to_return //result
+            };
+
+            Nan::TryCatch try_catch;
+            callback->Call(2, argv);
+            if (try_catch.HasCaught()) {
+              Nan::FatalException(try_catch);
+            }
+        } catch (...){
+            Local<Value> argv[] = {
+              Nan::New("C++ exception wrapping response").ToLocalChecked(), // err
+              Nan::Null() // result
+            };
+
+            Nan::TryCatch try_catch;
+            callback->Call(2, argv);
+            if (try_catch.HasCaught()) {
+              Nan::FatalException(try_catch);
+            }
+        }
+    } else {
+        Local<Value> argv[] = {
+          Nan::New("C++ exception").ToLocalChecked(), // err
+          Nan::Null() //result
+        };
+
+        Nan::TryCatch try_catch;
+        callback->Call(2, argv);
+        if (try_catch.HasCaught()) {
+          Nan::FatalException(try_catch);
+        }
+    }
+  }
+
+private:
+  Matrix *image;
+  cv::Mat dest;
+  cv::Size size;
+  double fx;
+  double fy;
+  int interpolation;
+  int success;
+
+};
+
+
 NAN_METHOD(Matrix::Resize) {
-  Nan::HandleScope scope;
+  SETUP_FUNCTION(Matrix)
+
+  if (info.Length() < 2) {
+    return Nan::ThrowError("Matrix.resize requires at least 2 argument2");
+  }
+
+  //im.resize( width, height );
+  //im.resize( width, height, fx, fy );
+  //im.resize( width, height, interpolation );
+  //im.resize( width, height, fx, fy, interpolation );
+  // if fn is added on the end, makes it Async
+  
+  int numargs = info.Length();
+  int isAsync = 0;
+  
+  if (info[numargs-1]->IsFunction()){
+      isAsync = 1;
+  }
+
+  if (info.Length() < 2+isAsync) {
+    return Nan::ThrowError("Matrix.resize requires at least x and y size argument2");
+  }
 
   int x = info[0]->Uint32Value();
   int y = info[1]->Uint32Value();
-  /*
-   CV_INTER_NN        =0,
-   CV_INTER_LINEAR    =1,
-   CV_INTER_CUBIC     =2,
-   CV_INTER_AREA      =3,
-   CV_INTER_LANCZOS4  =4
-   */
-  int interpolation =
-      (info.Length() < 3) ? (int)cv::INTER_LINEAR : info[2]->Uint32Value();
 
-  Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
-  cv::Mat res = cv::Mat(x, y, CV_32FC3);
-  cv::resize(self->mat, res, cv::Size(x, y), 0, 0, interpolation);
-  ~self->mat;
-  self->mat = res;
+  cv::Size size(x, y);
+  
+  if (size.area() == 0) {
+    return Nan::ThrowError("Area of size must be > 0");
+  }
 
-  return;
+  double fx = 0;
+  double fy = 0;
+  int interpolation = cv::INTER_LINEAR;
+
+  // if 4 or more args, then expect fx, fy next
+  if (numargs >= 4+isAsync) {
+    DOUBLE_FROM_ARGS(fx, 2)
+    DOUBLE_FROM_ARGS(fy, 3)
+    if (numargs == 5+isAsync) {
+      INT_FROM_ARGS(interpolation, 5)
+    }
+  } else {
+    // if 3 args after possible function, expect interpolation
+    if (numargs == 3+isAsync) {
+      INT_FROM_ARGS(interpolation, 3)
+    }
+  }
+  
+  // if async
+  if (isAsync){
+    REQ_FUN_ARG(numargs-1, cb);
+    Nan::Callback *callback = new Nan::Callback(cb.As<Function>());
+    Nan::AsyncQueueWorker(new ResizeASyncWorker(callback, self, size, fx, fy, interpolation));
+    info.GetReturnValue().Set(Nan::Null());
+  } else {
+    try{
+        Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
+        cv::Mat res = cv::Mat(x, y, CV_32FC3);
+        cv::resize(self->mat, res, cv::Size(x, y), 0, 0, interpolation);
+        self->setMat(res);
+    } catch (...){
+        return Nan::ThrowError("c++ Exception processing resize");
+    }
+  }
 }
 
 NAN_METHOD(Matrix::Rotate) {
@@ -1779,7 +2230,7 @@ NAN_METHOD(Matrix::Rotate) {
   cv::Mat rotMatrix(2, 3, CV_32FC1);
   cv::Mat res;
 
-  float angle = info[0]->ToNumber()->Value();
+  float angle = Nan::To<double>(info[0]).FromJust();
 
   // Modification by SergeMv
   //-------------
@@ -1799,11 +2250,10 @@ NAN_METHOD(Matrix::Rotate) {
     // See if we do right angle rotation, we transpose the matrix:
     if (angle2 % 180) {
       cv::transpose(self->mat, res);
-      ~self->mat;
-      self->mat = res;
+      self->setMat(res);
     }
     // Now flip the image
-    int mode = -1; // flip around both axes
+    int mode = -1;// flip around both axes
     // If counterclockwise, flip around the x-axis
     if (angle2 == 90) {
       mode = 0;
@@ -1822,12 +2272,11 @@ NAN_METHOD(Matrix::Rotate) {
   int y = info[1]->IsUndefined() ? round(self->mat.size().height / 2)
                                  : info[2]->Uint32Value();
 
-  cv::Point center = cv::Point(x, y);
+  cv::Point center = cv::Point(x,y);
   rotMatrix = getRotationMatrix2D(center, angle, 1.0);
 
   cv::warpAffine(self->mat, res, rotMatrix, self->mat.size());
-  ~self->mat;
-  self->mat = res;
+  self->setMat(res);
 
   return;
 }
@@ -1838,17 +2287,13 @@ NAN_METHOD(Matrix::GetRotationMatrix2D) {
     JSTHROW("Invalid number of arguments");
   }
 
-  float angle = info[0]->ToNumber()->Value();
-  int x = info[1]->Uint32Value();
-  int y = info[2]->Uint32Value();
-  double scale = info[3]->IsUndefined() ? 1.0 : info[3]->NumberValue();
+  float angle = Nan::To<double>(info[0]).FromJust();
+  int x = Nan::To<uint32_t>(info[1]).FromJust();
+  int y = Nan::To<uint32_t>(info[2]).FromJust();
+  double scale = Nan::To<double>(info[3]).FromMaybe(1.0);
 
-  Local<Object> img_to_return =
-      Nan::New(Matrix::constructor)->GetFunction()->NewInstance();
-  Matrix *img = Nan::ObjectWrap::Unwrap<Matrix>(img_to_return);
-
-  cv::Point center = cv::Point(x, y);
-  img->mat = getRotationMatrix2D(center, angle, scale);
+  cv::Point center = cv::Point(x,y);
+  Local<Object> img_to_return = Matrix::CreateWrappedFromMat(getRotationMatrix2D(center, angle, scale));
 
   info.GetReturnValue().Set(img_to_return);
 }
@@ -1869,8 +2314,7 @@ NAN_METHOD(Matrix::WarpAffine) {
   cv::Size resSize = cv::Size(dstRows, dstCols);
 
   cv::warpAffine(self->mat, res, rotMatrix->mat, resSize);
-  ~self->mat;
-  self->mat = res;
+  self->setMat(res);
 
   return;
 }
@@ -1878,14 +2322,20 @@ NAN_METHOD(Matrix::WarpAffine) {
 NAN_METHOD(Matrix::PyrDown) {
   SETUP_FUNCTION(Matrix)
 
+  int oldSize = self->mat.dataend - self->mat.datastart;
   cv::pyrDown(self->mat, self->mat);
+  int newSize = self->mat.dataend - self->mat.datastart;
+  Nan::AdjustExternalMemory(newSize - oldSize);
   return;
 }
 
 NAN_METHOD(Matrix::PyrUp) {
   SETUP_FUNCTION(Matrix)
 
+  int oldSize = self->mat.dataend - self->mat.datastart;
   cv::pyrUp(self->mat, self->mat);
+  int newSize = self->mat.dataend - self->mat.datastart;
+  Nan::AdjustExternalMemory(newSize - oldSize);
   return;
 }
 
@@ -1966,9 +2416,9 @@ NAN_METHOD(Matrix::Threshold) {
     } else {
       char *typeString = *typstr;
       char text[] = "\" is no supported binarization technique. "
-                    "Use \"Binary\" (default), \"Binary Inverted\", "
-                    "\"Threshold Truncated\", \"Threshold to Zero\" "
-                    "or \"Threshold to Zero Inverted\"";
+        "Use \"Binary\" (default), \"Binary Inverted\", "
+        "\"Threshold Truncated\", \"Threshold to Zero\" "
+        "or \"Threshold to Zero Inverted\"";
       char *errorMessage;
       errorMessage = new char[strlen(typeString) + strlen(text) + 2];
       strcpy(errorMessage, "\"");
@@ -1984,13 +2434,13 @@ NAN_METHOD(Matrix::Threshold) {
     Nan::Utf8String algorithm(info[3]);
 
     if (strcmp(*algorithm, "Simple") == 0) {
-      // Uses default
+        // Uses default
     } else if (strcmp(*algorithm, "Otsu") == 0) {
       typ += 8;
     } else {
       char *algo = *algorithm;
       char text[] = "\" is no supported threshold algorithm. "
-                    "Use \"Simple\" (default) or \"Otsu\".";
+        "Use \"Simple\" (default) or \"Otsu\".";
       char *errorMessage;
       errorMessage = new char[strlen(algo) + strlen(text) + 2];
       strcpy(errorMessage, "\"");
@@ -2002,12 +2452,12 @@ NAN_METHOD(Matrix::Threshold) {
     }
   }
 
-  Local<Object> img_to_return =
-      Nan::New(Matrix::constructor)->GetFunction()->NewInstance();
-  Matrix *img = Nan::ObjectWrap::Unwrap<Matrix>(img_to_return);
-  self->mat.copyTo(img->mat);
+  cv::Mat outputmat = cv::Mat();
+  self->mat.copyTo(outputmat);
 
-  cv::threshold(self->mat, img->mat, threshold, maxVal, typ);
+  cv::threshold(self->mat, outputmat, threshold, maxVal, typ);
+
+  Local < Object > img_to_return = CreateWrappedFromMat(outputmat);
 
   info.GetReturnValue().Set(img_to_return);
 }
@@ -2021,13 +2471,13 @@ NAN_METHOD(Matrix::AdaptiveThreshold) {
   double blockSize = info[3]->NumberValue();
   double C = info[4]->NumberValue();
 
-  Local<Object> img_to_return =
-      Nan::New(Matrix::constructor)->GetFunction()->NewInstance();
-  Matrix *img = Nan::ObjectWrap::Unwrap<Matrix>(img_to_return);
-  self->mat.copyTo(img->mat);
+  cv::Mat outputmat = cv::Mat();
+  self->mat.copyTo(outputmat);
 
-  cv::adaptiveThreshold(self->mat, img->mat, maxVal, adaptiveMethod,
-                        thresholdType, blockSize, C);
+  cv::adaptiveThreshold(self->mat, outputmat, maxVal, adaptiveMethod,
+      thresholdType, blockSize, C);
+  
+  Local < Object > img_to_return = CreateWrappedFromMat(outputmat);
 
   info.GetReturnValue().Set(img_to_return);
 }
@@ -2037,18 +2487,14 @@ NAN_METHOD(Matrix::MeanStdDev) {
 
   Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
 
-  Local<Object> mean =
-      Nan::New(Matrix::constructor)->GetFunction()->NewInstance();
-  Matrix *m_mean = Nan::ObjectWrap::Unwrap<Matrix>(mean);
-  Local<Object> stddev =
-      Nan::New(Matrix::constructor)->GetFunction()->NewInstance();
-  Matrix *m_stddev = Nan::ObjectWrap::Unwrap<Matrix>(stddev);
+  cv::Mat meanMat = cv::Mat();
+  cv::Mat stddevMat = cv::Mat();
 
-  cv::meanStdDev(self->mat, m_mean->mat, m_stddev->mat);
+  cv::meanStdDev(self->mat, meanMat, stddevMat);
 
   Local<Object> data = Nan::New<Object>();
-  data->Set(Nan::New<String>("mean").ToLocalChecked(), mean);
-  data->Set(Nan::New<String>("stddev").ToLocalChecked(), stddev);
+  data->Set(Nan::New<String>("mean").ToLocalChecked(), CreateWrappedFromMat(meanMat));
+  data->Set(Nan::New<String>("stddev").ToLocalChecked(), CreateWrappedFromMat(stddevMat));
 
   info.GetReturnValue().Set(data);
 }
@@ -2065,7 +2511,7 @@ NAN_METHOD(Matrix::MeanStdDev) {
 NAN_METHOD(Matrix::CopyTo) {
   Nan::HandleScope scope;
 
-  Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
+  Matrix * self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
   int width = self->mat.size().width;
   int height = self->mat.size().height;
 
@@ -2128,54 +2574,54 @@ NAN_METHOD(Matrix::CvtColor) {
   // param 0 - destination image
   Matrix *dest = Nan::ObjectWrap::Unwrap<Matrix>(info[0]->ToObject());
 
-  Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
+  Matrix * self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
   if (info.Length() < 2) {
     Nan::ThrowTypeError("Invalid number of arguments");
   }
 
   int iTransform = 0;
   if (info[1]->IsString()) {
-    // Get transform string
+  // Get transform string
     String::Utf8Value str(info[1]->ToString());
-    std::string str2 = std::string(*str);
-    const char *sTransform = (const char *)str2.c_str();
+  std::string str2 = std::string(*str);
+  const char * sTransform = (const char *) str2.c_str();
 
     if (!strcmp(sTransform, "BGR2GRAY")) {
-      iTransform = CV_BGR2GRAY;
+    iTransform = CV_BGR2GRAY;
     } else if (!strcmp(sTransform, "GRAY2BGR")) {
-      iTransform = CV_GRAY2BGR;
+    iTransform = CV_GRAY2BGR;
     } else if (!strcmp(sTransform, "BGR2XYZ")) {
-      iTransform = CV_BGR2XYZ;
+    iTransform = CV_BGR2XYZ;
     } else if (!strcmp(sTransform, "XYZ2BGR")) {
-      iTransform = CV_XYZ2BGR;
+    iTransform = CV_XYZ2BGR;
     } else if (!strcmp(sTransform, "BGR2YCrCb")) {
-      iTransform = CV_BGR2YCrCb;
+    iTransform = CV_BGR2YCrCb;
     } else if (!strcmp(sTransform, "YCrCb2BGR")) {
-      iTransform = CV_YCrCb2BGR;
+    iTransform = CV_YCrCb2BGR;
     } else if (!strcmp(sTransform, "BGR2HSV")) {
-      iTransform = CV_BGR2HSV;
+    iTransform = CV_BGR2HSV;
     } else if (!strcmp(sTransform, "HSV2BGR")) {
-      iTransform = CV_HSV2BGR;
+    iTransform = CV_HSV2BGR;
     } else if (!strcmp(sTransform, "BGR2HLS")) {
-      iTransform = CV_BGR2HLS;
+    iTransform = CV_BGR2HLS;
     } else if (!strcmp(sTransform, "HLS2BGR")) {
-      iTransform = CV_HLS2BGR;
+    iTransform = CV_HLS2BGR;
     } else if (!strcmp(sTransform, "BGR2Lab")) {
-      iTransform = CV_BGR2Lab;
+    iTransform = CV_BGR2Lab;
     } else if (!strcmp(sTransform, "Lab2BGR")) {
-      iTransform = CV_Lab2BGR;
+    iTransform = CV_Lab2BGR;
     } else if (!strcmp(sTransform, "BGR2Luv")) {
-      iTransform = CV_BGR2Luv;
+    iTransform = CV_BGR2Luv;
     } else if (!strcmp(sTransform, "Luv2BGR")) {
-      iTransform = CV_Luv2BGR;
+    iTransform = CV_Luv2BGR;
     } else if (!strcmp(sTransform, "BayerBG2BGR")) {
-      iTransform = CV_BayerBG2BGR;
+    iTransform = CV_BayerBG2BGR;
     } else if (!strcmp(sTransform, "BayerGB2BGR")) {
-      iTransform = CV_BayerGB2BGR;
+    iTransform = CV_BayerGB2BGR;
     } else if (!strcmp(sTransform, "BayerRG2BGR")) {
-      iTransform = CV_BayerRG2BGR;
+    iTransform = CV_BayerRG2BGR;
     } else if (!strcmp(sTransform, "BayerGR2BGR")) {
-      iTransform = CV_BayerGR2BGR;
+    iTransform = CV_BayerGR2BGR;
     } else if (!strcmp(sTransform, "BayerBG2RGB")) {
       iTransform = CV_BayerBG2RGB;
     } else if (!strcmp(sTransform, "BayerGB2RGB")) {
@@ -2185,7 +2631,7 @@ NAN_METHOD(Matrix::CvtColor) {
     } else if (!strcmp(sTransform, "BayerGR2RGB")) {
       iTransform = CV_BayerGR2RGB;
     } else if (!strcmp(sTransform, "BGR2RGB")) {
-      iTransform = CV_BGR2RGB;
+    iTransform = CV_BGR2RGB;
     } else if (!strcmp(sTransform, "GRAY2BGRA")) {
       iTransform = CV_GRAY2BGRA;
     } else if (!strcmp(sTransform, "GRAY2BGRA")) {
@@ -2194,10 +2640,10 @@ NAN_METHOD(Matrix::CvtColor) {
       iTransform = CV_GRAY2BGRA;
     } else if (!strcmp(sTransform, "GRAY2RGBA")) {
       iTransform = CV_GRAY2RGBA;
-    } else {
-      iTransform = 0; // to avoid compiler warning
-      Nan::ThrowTypeError("Conversion code is unsupported");
-    }
+  } else {
+    iTransform = 0;  // to avoid compiler warning
+    Nan::ThrowTypeError("Conversion code is unsupported");
+  }
   } else if (info[0]->IsNumber()) {
     iTransform = info[0]->NumberValue();
     if (iTransform >= CV_COLORCVT_MAX) {
@@ -2205,14 +2651,14 @@ NAN_METHOD(Matrix::CvtColor) {
     }
   }
 
-  // std::cout << "cvtColor " << iTransform << std::endl;
-  // cv::Mat image;
-  cv::cvtColor(self->mat, dest->mat, iTransform);
-  // Local<Object> result =
-  //     Nan::New(Matrix::constructor)->GetFunction()->NewInstance();
-  // Matrix *resultmat = Nan::ObjectWrap::Unwrap<Matrix>(result);
-  // resultmat->mat = image;
-  // info.GetReturnValue().Set(result);
+  int oldSize = self->mat.dataend - self->mat.datastart;
+  cv::cvtColor(self->mat, self->mat, iTransform);
+  int newSize = self->mat.dataend - self->mat.datastart;
+  if(oldSize != newSize){
+    Nan::AdjustExternalMemory(newSize - oldSize);
+  }
+
+  return;
 }
 
 // @author SergeMv
@@ -2220,7 +2666,7 @@ NAN_METHOD(Matrix::CvtColor) {
 NAN_METHOD(Matrix::Split) {
   Nan::HandleScope scope;
 
-  Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
+  Matrix * self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
 
   unsigned int size = self->mat.channels();
   std::vector<cv::Mat> channels;
@@ -2234,10 +2680,7 @@ NAN_METHOD(Matrix::Split) {
   size = channels.size();
   Local<Array> arrChannels = Nan::New<Array>(size);
   for (unsigned int i = 0; i < size; i++) {
-    Local<Object> matObject =
-        Nan::New(Matrix::constructor)->GetFunction()->NewInstance();
-    Matrix *m = Nan::ObjectWrap::Unwrap<Matrix>(matObject);
-    m->mat = channels[i];
+    Local<Object> matObject = Matrix::CreateWrappedFromMatIfNotReferenced(channels[i], 1);
     arrChannels->Set(i, matObject);
   }
 
@@ -2249,11 +2692,12 @@ NAN_METHOD(Matrix::Split) {
 NAN_METHOD(Matrix::Merge) {
   Nan::HandleScope scope;
 
-  Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
+  Matrix * self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
   if (!info[0]->IsArray()) {
     Nan::ThrowTypeError("The argument must be an array");
   }
-  Local<Array> jsChannels = Local<Array>::Cast(info[0]);
+  int oldSize = self->mat.dataend - self->mat.datastart;
+  v8::Local<v8::Array> jsChannels = v8::Local<v8::Array>::Cast(info[0]);
 
   unsigned int L = jsChannels->Length();
   std::vector<cv::Mat> vChannels(L);
@@ -2263,6 +2707,8 @@ NAN_METHOD(Matrix::Merge) {
     vChannels[i] = matObject->mat;
   }
   cv::merge(vChannels, self->mat);
+  int newSize = self->mat.dataend - self->mat.datastart;
+  Nan::AdjustExternalMemory(newSize - oldSize);
 
   return;
 }
@@ -2272,7 +2718,7 @@ NAN_METHOD(Matrix::Merge) {
 // img.equalizeHist()
 NAN_METHOD(Matrix::EqualizeHist) {
   Nan::HandleScope scope;
-  Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
+  Matrix * self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
 
   cv::equalizeHist(self->mat, self->mat);
 
@@ -2354,7 +2800,7 @@ NAN_METHOD(Matrix::FloodFill) {
     // error
   }
 
-  Local<Object> obj = info[0]->ToObject();
+  Local < Object > obj = info[0]->ToObject();
   cv::Rect rect;
 
   int ret = cv::floodFill(
@@ -2399,10 +2845,10 @@ NAN_METHOD(Matrix::TemplateMatches) {
 
   if (ascending) {
     cv::sortIdx(self->mat.reshape(0, 1), indices,
-                CV_SORT_ASCENDING + CV_SORT_EVERY_ROW);
+    CV_SORT_ASCENDING + CV_SORT_EVERY_ROW);
   } else {
     cv::sortIdx(self->mat.reshape(0, 1), indices,
-                CV_SORT_DESCENDING + CV_SORT_EVERY_ROW);
+    CV_SORT_DESCENDING + CV_SORT_EVERY_ROW);
   }
 
   cv::Mat hit_mask = cv::Mat::zeros(self->mat.size(), CV_64F);
@@ -2440,14 +2886,14 @@ NAN_METHOD(Matrix::TemplateMatches) {
       int max_x = maxSize.width - 1;
       int max_y = maxSize.height - 1;
       cv::Point top_left = cv::Point(std::max(0, pt.x - min_x_distance),
-                                     std::max(0, pt.y - min_y_distance));
+        std::max(0, pt.y - min_y_distance));
       cv::Point top_right = cv::Point(std::min(max_x, pt.x + min_x_distance),
-                                      std::max(0, pt.y - min_y_distance));
+        std::max(0, pt.y - min_y_distance));
       cv::Point bottom_left = cv::Point(std::max(0, pt.x - min_x_distance),
-                                        std::min(max_y, pt.y + min_y_distance));
+        std::min(max_y, pt.y + min_y_distance));
       cv::Point bottom_right =
           cv::Point(std::min(max_x, pt.x + min_x_distance),
-                    std::min(max_y, pt.y + min_y_distance));
+        std::min(max_y, pt.y + min_y_distance));
       if (hit_mask.at<double>(top_left.y, top_left.x) > 0)
         continue;
       if (hit_mask.at<double>(top_right.y, top_right.x) > 0)
@@ -2464,7 +2910,7 @@ NAN_METHOD(Matrix::TemplateMatches) {
     Local<Value> y_value = Nan::New<Number>(pt.y);
     Local<Value> probability_value = Nan::New<Number>(probability);
 
-    Local<Object> probability_object = Nan::New<Object>();
+    Local < Object > probability_object = Nan::New<Object>();
     probability_object->Set(Nan::New<String>("x").ToLocalChecked(), x_value);
     probability_object->Set(Nan::New<String>("y").ToLocalChecked(), y_value);
     probability_object->Set(Nan::New<String>("probability").ToLocalChecked(),
@@ -2475,6 +2921,34 @@ NAN_METHOD(Matrix::TemplateMatches) {
   }
 
   info.GetReturnValue().Set(probabilites_array);
+}
+
+// @author Evilcat325
+// MatchTemplate accept a Matrix
+// Usage: output = input.matchTemplateByMatrix(matrix. method);
+NAN_METHOD(Matrix::MatchTemplateByMatrix) {
+  Nan::HandleScope scope;
+
+  Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
+  Matrix *templ = Nan::ObjectWrap::Unwrap<Matrix>(info[0]->ToObject());
+
+  int cols = self->mat.cols - templ->mat.cols + 1;
+  int rows = self->mat.rows - templ->mat.rows + 1;
+  cv::Mat result(cols, rows, CV_32FC1);
+
+  /*
+   TM_SQDIFF        =0
+   TM_SQDIFF_NORMED =1
+   TM_CCORR         =2
+   TM_CCORR_NORMED  =3
+   TM_CCOEFF        =4
+   TM_CCOEFF_NORMED =5
+   */
+
+  int method = (info.Length() < 2) ? (int)cv::TM_CCORR_NORMED : info[1]->Uint32Value();
+  if (!(method >= 0 && method <= 5)) method = (int)cv::TM_CCORR_NORMED;
+  cv::matchTemplate(self->mat, templ->mat, result, method);
+  info.GetReturnValue().Set(CreateWrappedFromMat(result));
 }
 
 // @author ytham
@@ -2490,12 +2964,9 @@ NAN_METHOD(Matrix::MatchTemplate) {
   cv::Mat templ;
   templ = cv::imread(filename, -1);
 
-  Local<Object> out =
-      Nan::New(Matrix::constructor)->GetFunction()->NewInstance();
-  Matrix *m_out = Nan::ObjectWrap::Unwrap<Matrix>(out);
   int cols = self->mat.cols - templ.cols + 1;
   int rows = self->mat.rows - templ.rows + 1;
-  m_out->mat.create(cols, rows, CV_32FC1);
+  cv::Mat result(cols, rows, CV_32FC1);
 
   /*
    TM_SQDIFF        =0
@@ -2506,40 +2977,39 @@ NAN_METHOD(Matrix::MatchTemplate) {
    TM_CCOEFF_NORMED =5
    */
 
-  int method =
-      (info.Length() < 2) ? (int)cv::TM_CCORR_NORMED : info[1]->Uint32Value();
-  cv::matchTemplate(self->mat, templ, m_out->mat, method);
-  cv::normalize(m_out->mat, m_out->mat, 0, 1, cv::NORM_MINMAX, -1, cv::Mat());
+  int method = (info.Length() < 2) ? (int)cv::TM_CCORR_NORMED : info[1]->Uint32Value();
+  cv::matchTemplate(self->mat, templ, result, method);
+  cv::normalize(result, result, 0, 1, cv::NORM_MINMAX, -1, cv::Mat());
   double minVal;
   double maxVal;
   cv::Point minLoc;
   cv::Point maxLoc;
   cv::Point matchLoc;
 
-  minMaxLoc(m_out->mat, &minVal, &maxVal, &minLoc, &maxLoc, cv::Mat());
+  minMaxLoc(result, &minVal, &maxVal, &minLoc, &maxLoc, cv::Mat());
 
-  if (method == CV_TM_SQDIFF || method == CV_TM_SQDIFF_NORMED) {
+  if(method  == CV_TM_SQDIFF || method == CV_TM_SQDIFF_NORMED) {
     matchLoc = minLoc;
   } else {
     matchLoc = maxLoc;
   }
 
-  // detected ROI
+  //detected ROI
   unsigned int roi_x = matchLoc.x;
   unsigned int roi_y = matchLoc.y;
   unsigned int roi_width = templ.cols;
   unsigned int roi_height = templ.rows;
 
-  // draw rectangle
-  if (info.Length() >= 3) {
-    cv::Rect roi(roi_x, roi_y, roi_width, roi_height);
-    cv::rectangle(self->mat, roi, cv::Scalar(0, 0, 255));
+  //draw rectangle
+  if(info.Length() >= 3) {
+    cv::Rect roi(roi_x,roi_y,roi_width,roi_height);
+    cv::rectangle(self->mat, roi, cv::Scalar(0,0,255));
   }
 
-  m_out->mat.convertTo(m_out->mat, CV_8UC1, 255, 0);
+  result.convertTo(result, CV_8UC1, 255, 0);
 
-  Local<Array> arr = Nan::New<Array>(5);
-  arr->Set(0, out);
+  v8::Local <v8::Array> arr = Nan::New<v8::Array>(5);
+  arr->Set(0, CreateWrappedFromMat(result));
   arr->Set(1, Nan::New<Number>(roi_x));
   arr->Set(2, Nan::New<Number>(roi_y));
   arr->Set(3, Nan::New<Number>(roi_width));
@@ -2558,7 +3028,7 @@ NAN_METHOD(Matrix::MinMaxLoc) {
   double maxVal;
   cv::Point minLoc;
   cv::Point maxLoc;
-  cv::minMaxLoc(self->mat, &minVal, &maxVal, &minLoc, &maxLoc, cv::Mat());
+  cv::minMaxLoc(self->mat, &minVal, &maxVal, &minLoc, &maxLoc, cv::Mat() );
 
   Local<Value> v_minVal = Nan::New<Number>(minVal);
   Local<Value> v_maxVal = Nan::New<Number>(maxVal);
@@ -2603,15 +3073,15 @@ NAN_METHOD(Matrix::PutText) {
   Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
   Nan::Utf8String textString(info[0]); // FIXME: might cause issues, see here
                                        // https://github.com/rvagg/nan/pull/152
-  char *text = *textString; //(char *) malloc(textString.length() + 1);
-  // strcpy(text, *textString);
+  char *text = *textString;//(char *) malloc(textString.length() + 1);
+  //strcpy(text, *textString);
 
   int x = info[1]->IntegerValue();
   int y = info[2]->IntegerValue();
 
   Nan::Utf8String fontString(info[3]);
-  char *font = *fontString; //(char *) malloc(fontString.length() + 1);
-  // strcpy(font, *fontString);
+  char *font = *fontString;//(char *) malloc(fontString.length() + 1);
+  //strcpy(font, *fontString);
   int constFont = cv::FONT_HERSHEY_SIMPLEX;
 
   if (!strcmp(font, "HERSEY_SIMPLEX")) {
@@ -2666,10 +3136,7 @@ NAN_METHOD(Matrix::GetPerspectiveTransform) {
                              tgtArray->Get(i * 2 + 1)->IntegerValue());
   }
 
-  Local<Object> xfrm =
-      Nan::New(Matrix::constructor)->GetFunction()->NewInstance();
-  Matrix *xfrmmat = Nan::ObjectWrap::Unwrap<Matrix>(xfrm);
-  xfrmmat->mat = cv::getPerspectiveTransform(src_corners, tgt_corners);
+  Local<Object> xfrm = Matrix::CreateWrappedFromMat(cv::getPerspectiveTransform(src_corners, tgt_corners));
 
   info.GetReturnValue().Set(xfrm);
 }
@@ -2688,17 +3155,16 @@ NAN_METHOD(Matrix::WarpPerspective) {
   cv::Scalar borderColor(0, 0, 255);
 
   if (info[3]->IsArray()) {
-    Local<Object> objColor = info[3]->ToObject();
+    Local < Object > objColor = info[3]->ToObject();
     borderColor = setColor(objColor);
   }
 
   cv::Mat res = cv::Mat(width, height, CV_32FC3);
 
   cv::warpPerspective(self->mat, res, xfrm->mat, cv::Size(width, height), flags,
-                      borderMode, borderColor);
+      borderMode, borderColor);
 
-  ~self->mat;
-  self->mat = res;
+  self->setMat(res);
 
   info.GetReturnValue().Set(Nan::Null());
 }
@@ -2720,7 +3186,7 @@ NAN_METHOD(Matrix::SetWithMask) {
   SETUP_FUNCTION(Matrix)
 
   // param 0 - target value:
-  Local<Object> valArray = info[0]->ToObject();
+  Local < Object > valArray = info[0]->ToObject();
   cv::Scalar newvals;
   newvals.val[0] = valArray->Get(0)->NumberValue();
   newvals.val[1] = valArray->Get(1)->NumberValue();
@@ -2800,8 +3266,8 @@ NAN_METHOD(Matrix::Shift) {
       cv::Rect(std::max(-deltai.x, 0), std::max(-deltai.y, 0), 0, 0) +
       self->mat.size();
   res = padded(roi);
-  ~self->mat;
-  self->mat = res;
+
+  self->setMat(res);
 
   return;
 }
@@ -2825,11 +3291,7 @@ NAN_METHOD(Matrix::Reshape) {
     JSTHROW("Invalid number of arguments");
   }
 
-  Local<Object> img_to_return =
-      Nan::New(Matrix::constructor)->GetFunction()->NewInstance();
-  Matrix *img = Nan::ObjectWrap::Unwrap<Matrix>(img_to_return);
-
-  img->mat = self->mat.reshape(cn, rows);
+  Local<Object> img_to_return = Matrix::CreateWrappedFromMatIfNotReferenced(self->mat.reshape(cn, rows),0);
 
   info.GetReturnValue().Set(img_to_return);
 }
@@ -2838,6 +3300,12 @@ NAN_METHOD(Matrix::Release) {
   Nan::HandleScope scope;
 
   Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
+
+  if(self->getWrappedRefCount() == 1){
+    int size = self->mat.dataend - self->mat.datastart;
+    Nan::AdjustExternalMemory(-1 * size);
+  }
+
   self->mat.release();
 
   return;
@@ -3080,3 +3548,126 @@ NAN_METHOD(Matrix::LinePixels) {
     JSTHROW("Invalid number of arguments");
   }
 }
+// leave this out - can't see a way it could be useful to us, as release() always completely forgets the data
+//NAN_METHOD(Matrix::Addref) {
+//  Nan::HandleScope scope;
+//
+//  Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
+//  self->mat.addref();
+//
+//  return;
+//}
+
+
+int Matrix::getWrappedRefCount(){
+    int refcount = -1;
+#if CV_MAJOR_VERSION >= 3
+    if (mat.u){
+        refcount = mat.u->refcount;
+    } else {
+        refcount = -1; // indicates no reference ptr
+    }
+#else
+    if (mat.refcount){
+        refcount = *(mat.refcount);
+    } else {
+        refcount = -1; // indicates no reference ptr
+    }
+#endif 
+    return refcount;
+}
+
+NAN_METHOD(Matrix::GetrefCount) {
+  Nan::HandleScope scope;
+  Matrix *self = Nan::ObjectWrap::Unwrap<Matrix>(info.This());
+  
+  int refcount = self->getWrappedRefCount();
+
+  info.GetReturnValue().Set(Nan::New<Number>(refcount));
+  return;
+}
+
+
+// NAN_METHOD(Matrix::Subtract) {
+//   SETUP_FUNCTION(Matrix)
+
+//   if (info.Length() < 1) {
+//     Nan::ThrowTypeError("Invalid number of arguments");
+//   }
+
+//   Matrix *other = Nan::ObjectWrap::Unwrap<Matrix>(info[0]->ToObject());
+
+//   self->mat -= other->mat;
+
+//   return;
+// }
+
+NAN_METHOD(Matrix::Compare) {
+  SETUP_FUNCTION(Matrix)
+
+  if (info.Length() < 2) {
+    Nan::ThrowTypeError("Invalid number of arguments");
+  }
+  Matrix *other = Nan::ObjectWrap::Unwrap<Matrix>(info[0]->ToObject());
+
+  int cmpop = info[1]->IntegerValue();
+
+  int width = self->mat.size().width;
+  int height = self->mat.size().height;
+
+  cv::Mat res = cv::Mat(width, height, CV_8UC1);
+
+  cv::compare(self->mat, other->mat, res, cmpop);
+  Local<Object> out = Matrix::CreateWrappedFromMat(res);
+
+  info.GetReturnValue().Set(out);
+  return;
+}
+NAN_METHOD(Matrix::Mul) {
+  SETUP_FUNCTION(Matrix)
+
+  if (info.Length() < 1) {
+    Nan::ThrowTypeError("Invalid number of arguments");
+  }
+
+  Matrix *other = Nan::ObjectWrap::Unwrap<Matrix>(info[0]->ToObject());
+
+  double scale = 1;
+  if (info.Length() > 1) scale = info[1]->NumberValue();
+
+  cv::Mat res = self->mat.mul(other->mat, scale);
+
+  Local<Object> out = Matrix::CreateWrappedFromMat(res);
+
+  info.GetReturnValue().Set(out);
+  return;
+}
+
+NAN_METHOD(Matrix::Div) {
+  SETUP_FUNCTION(Matrix)
+
+  if (info.Length() < 1) {
+    Nan::ThrowTypeError("Invalid number of arguments");
+  }
+
+  Matrix *other = Nan::ObjectWrap::Unwrap<Matrix>(info[0]->ToObject());
+
+  cv::divide(self->mat, other->mat, self->mat);
+
+  return;
+}
+
+NAN_METHOD(Matrix::Pow) {
+  SETUP_FUNCTION(Matrix)
+
+  if (info.Length() < 1) {
+    Nan::ThrowTypeError("Invalid number of arguments");
+  }
+
+  double power = info[0]->NumberValue();
+
+  cv::pow(self->mat, power, self->mat);
+
+  return;
+}
+
